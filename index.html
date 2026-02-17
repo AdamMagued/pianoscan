@@ -829,7 +829,13 @@
       <!-- RESULT -->
       <div class="result-box" id="result-box">
         <div class="result-label">✓ Scan complete — play below</div>
-        <midi-player id="midi-player" sound-font></midi-player>
+        <midi-visualizer type="piano-roll" id="midi-viz" style="height:90px; border-radius:4px; overflow:hidden; margin-bottom:12px; background:rgba(0,0,0,0.2);"></midi-visualizer>
+        <midi-player id="midi-player" sound-font="https://storage.googleapis.com/magentadata/js/soundfonts/salamander" visualizer="#midi-viz" style="width:100%;"></midi-player>
+        <div style="display:flex; align-items:center; gap:14px; margin:16px 0 8px;">
+          <span style="font-family:'DM Mono',monospace; font-size:11px; color:rgba(255,255,255,0.45); letter-spacing:0.08em; white-space:nowrap;">SPEED</span>
+          <input type="range" id="speed-slider" min="0.5" max="2" step="0.1" value="1" style="flex:1; accent-color:var(--gold);">
+          <span id="speed-label" style="font-family:'DM Mono',monospace; font-size:12px; color:var(--gold-light); min-width:34px; text-align:right;">1.0x</span>
+        </div>
         <a id="download-link" class="download-btn" download="pianoscan.mid">
           ⬇ Download MIDI
         </a>
@@ -1019,6 +1025,16 @@
       // Update MIDI player
       midiPlayer.src = url;
       downloadLink.href = url;
+
+      // Wire speed slider
+      const speedSlider = document.getElementById('speed-slider');
+      const speedLabel = document.getElementById('speed-label');
+      speedSlider.oninput = () => {
+        const val = parseFloat(speedSlider.value);
+        speedLabel.textContent = val.toFixed(1) + 'x';
+        // html-midi-player exposes playbackRate on its internal player
+        if (midiPlayer.player) midiPlayer.player.playbackRate = val;
+      };
 
       setProgress(100);
       setStatus('Scan complete!', 'success');
