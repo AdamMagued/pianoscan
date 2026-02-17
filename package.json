@@ -1,0 +1,8 @@
+{
+  "name": "pianoscan",
+  "dependencies": {
+    "formidable": "^3.5.1",
+    "node-fetch": "^2.7.0",
+    "form-data": "^4.0.0"
+  }
+}
