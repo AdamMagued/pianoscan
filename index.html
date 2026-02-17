@@ -6,7 +6,7 @@
 <title>PianoScan — Sheet Music to MIDI</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/html-midi-player@1.5.0/build/index.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tonejs/midi@2.0.27/build/Midi.js"></script>
 <style>
   :root {
     --ink: #0d0d14;
@@ -829,12 +829,25 @@
       <!-- RESULT -->
       <div class="result-box" id="result-box">
         <div class="result-label">✓ Scan complete — play below</div>
-        <midi-visualizer type="piano-roll" id="midi-viz" style="height:90px; border-radius:4px; overflow:hidden; margin-bottom:12px; background:rgba(0,0,0,0.2);"></midi-visualizer>
-        <midi-player id="midi-player" sound-font="https://storage.googleapis.com/magentadata/js/soundfonts/salamander" visualizer="#midi-viz" style="width:100%;"></midi-player>
-        <div style="display:flex; align-items:center; gap:14px; margin:16px 0 8px;">
-          <span style="font-family:'DM Mono',monospace; font-size:11px; color:rgba(255,255,255,0.45); letter-spacing:0.08em; white-space:nowrap;">SPEED</span>
-          <input type="range" id="speed-slider" min="0.5" max="2" step="0.1" value="1" style="flex:1; accent-color:var(--gold);">
-          <span id="speed-label" style="font-family:'DM Mono',monospace; font-size:12px; color:var(--gold-light); min-width:34px; text-align:right;">1.0x</span>
+        <div style="background:rgba(0,0,0,0.2); border-radius:4px; padding:20px; margin-bottom:12px;">
+          <div style="display:flex; align-items:center; gap:16px; margin-bottom:16px;">
+            <button id="play-btn" onclick="togglePlay()" style="width:48px;height:48px;border-radius:50%;background:var(--gold);border:none;cursor:pointer;font-size:18px;flex-shrink:0;color:#1a0a3d;font-weight:bold;display:flex;align-items:center;justify-content:center;">▶</button>
+            <button onclick="stopPlay()" style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.1);border:none;cursor:pointer;font-size:14px;flex-shrink:0;color:white;">⏹</button>
+            <div style="flex:1;">
+              <div style="height:6px;background:rgba(255,255,255,0.1);border-radius:3px;cursor:pointer;position:relative;" id="seek-bar" onclick="seekBar(event)">
+                <div id="seek-fill" style="height:100%;width:0%;background:var(--gold);border-radius:3px;pointer-events:none;"></div>
+              </div>
+              <div style="display:flex;justify-content:space-between;margin-top:6px;">
+                <span id="time-current" style="font-family:'DM Mono',monospace;font-size:11px;color:rgba(255,255,255,0.4);">0:00</span>
+                <span id="time-total" style="font-family:'DM Mono',monospace;font-size:11px;color:rgba(255,255,255,0.4);">0:00</span>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:14px;">
+            <span style="font-family:'DM Mono',monospace;font-size:11px;color:rgba(255,255,255,0.45);letter-spacing:0.08em;white-space:nowrap;">SPEED</span>
+            <input type="range" id="speed-slider" min="0.5" max="2" step="0.1" value="1" oninput="changeSpeed(this.value)" style="flex:1;accent-color:var(--gold);">
+            <span id="speed-label" style="font-family:'DM Mono',monospace;font-size:12px;color:var(--gold-light);min-width:34px;text-align:right;">1.0x</span>
+          </div>
         </div>
         <a id="download-link" class="download-btn" download="pianoscan.mid">
           ⬇ Download MIDI
@@ -881,7 +894,6 @@
   const statusText  = document.getElementById('status-text');
   const progressFill= document.getElementById('progress-fill');
   const resultBox   = document.getElementById('result-box');
-  const midiPlayer  = document.getElementById('midi-player');
   const downloadLink= document.getElementById('download-link');
   const demoCard    = document.getElementById('demo-card');
   const noTries     = document.getElementById('no-tries');
@@ -1021,20 +1033,8 @@
 
       midiBlob = new Blob([data], { type: 'audio/midi' });
       const url = URL.createObjectURL(midiBlob);
-
-      // Update MIDI player
-      midiPlayer.src = url;
       downloadLink.href = url;
-
-      // Wire speed slider
-      const speedSlider = document.getElementById('speed-slider');
-      const speedLabel = document.getElementById('speed-label');
-      speedSlider.oninput = () => {
-        const val = parseFloat(speedSlider.value);
-        speedLabel.textContent = val.toFixed(1) + 'x';
-        // html-midi-player exposes playbackRate on its internal player
-        if (midiPlayer.player) midiPlayer.player.playbackRate = val;
-      };
+      await loadMidiForPlayback(midiBlob);
 
       setProgress(100);
       setStatus('Scan complete!', 'success');
@@ -1068,6 +1068,137 @@
   }
 
   init();
+
+  // ---- MIDI PLAYBACK ENGINE ----
+  let audioCtx = null;
+  let midiData = null;
+  let scheduledNodes = [];
+  let startTime = 0;
+  let pauseOffset = 0;
+  let isPlaying = false;
+  let playbackSpeed = 1.0;
+  let durationSecs = 0;
+  let rafId = null;
+
+  const NOTE_FREQ = (midi) => 440 * Math.pow(2, (midi - 69) / 12);
+
+  async function loadMidiForPlayback(blob) {
+    const arrBuf = await blob.arrayBuffer();
+    // Use Midi.js from @tonejs/midi
+    const midi = new Midi(arrBuf);
+    midiData = midi;
+    durationSecs = midi.duration;
+    document.getElementById('time-total').textContent = fmt(durationSecs);
+    document.getElementById('seek-fill').style.width = '0%';
+    document.getElementById('time-current').textContent = '0:00';
+    pauseOffset = 0;
+    document.getElementById('play-btn').textContent = '▶';
+  }
+
+  function fmt(s) {
+    const m = Math.floor(s / 60), sec = Math.floor(s % 60);
+    return m + ':' + String(sec).padStart(2, '0');
+  }
+
+  function togglePlay() {
+    if (!midiData) return;
+    if (isPlaying) { pausePlayback(); } else { startPlayback(); }
+  }
+
+  function startPlayback() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    scheduleNotes(pauseOffset);
+    isPlaying = true;
+    startTime = audioCtx.currentTime - pauseOffset / playbackSpeed;
+    document.getElementById('play-btn').textContent = '⏸';
+    tickUI();
+  }
+
+  function pausePlayback() {
+    pauseOffset = (audioCtx.currentTime - startTime) * playbackSpeed;
+    stopAllNodes();
+    isPlaying = false;
+    document.getElementById('play-btn').textContent = '▶';
+    cancelAnimationFrame(rafId);
+  }
+
+  function stopPlay() {
+    pauseOffset = 0;
+    stopAllNodes();
+    isPlaying = false;
+    document.getElementById('play-btn').textContent = '▶';
+    document.getElementById('seek-fill').style.width = '0%';
+    document.getElementById('time-current').textContent = '0:00';
+    cancelAnimationFrame(rafId);
+  }
+
+  function stopAllNodes() {
+    scheduledNodes.forEach(n => { try { n.stop(); } catch(e){} });
+    scheduledNodes = [];
+  }
+
+  function scheduleNotes(fromSecs) {
+    stopAllNodes();
+    if (!audioCtx || !midiData) return;
+    const now = audioCtx.currentTime;
+    midiData.tracks.forEach(track => {
+      track.notes.forEach(note => {
+        const t = note.time;
+        if (t < fromSecs - 0.01) return;
+        const startAt = now + (t - fromSecs) / playbackSpeed;
+        const dur = note.duration / playbackSpeed;
+        if (startAt < now - 0.01) return;
+
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc.type = 'triangle';
+        osc.frequency.value = NOTE_FREQ(note.midi);
+        const vel = (note.velocity || 0.7);
+        gain.gain.setValueAtTime(0, startAt);
+        gain.gain.linearRampToValueAtTime(vel * 0.25, startAt + 0.005);
+        gain.gain.exponentialRampToValueAtTime(0.001, startAt + dur);
+        osc.start(startAt);
+        osc.stop(startAt + dur + 0.05);
+        scheduledNodes.push(osc);
+      });
+    });
+  }
+
+  function tickUI() {
+    if (!isPlaying) return;
+    const elapsed = (audioCtx.currentTime - startTime) * playbackSpeed;
+    if (elapsed >= durationSecs) { stopPlay(); return; }
+    const pct = Math.min(elapsed / durationSecs * 100, 100);
+    document.getElementById('seek-fill').style.width = pct + '%';
+    document.getElementById('time-current').textContent = fmt(elapsed);
+    rafId = requestAnimationFrame(tickUI);
+  }
+
+  function seekBar(e) {
+    if (!midiData) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const pct = (e.clientX - rect.left) / rect.width;
+    pauseOffset = pct * durationSecs;
+    document.getElementById('seek-fill').style.width = (pct * 100) + '%';
+    document.getElementById('time-current').textContent = fmt(pauseOffset);
+    if (isPlaying) { stopAllNodes(); scheduleNotes(pauseOffset); startTime = audioCtx.currentTime - pauseOffset / playbackSpeed; }
+  }
+
+  function changeSpeed(val) {
+    playbackSpeed = parseFloat(val);
+    document.getElementById('speed-label').textContent = playbackSpeed.toFixed(1) + 'x';
+    if (isPlaying) {
+      pauseOffset = (audioCtx.currentTime - startTime) * (playbackSpeed);
+      stopAllNodes();
+      scheduleNotes(pauseOffset);
+      startTime = audioCtx.currentTime - pauseOffset / playbackSpeed;
+    }
+  }
+
 </script>
 </body>
 </html>
