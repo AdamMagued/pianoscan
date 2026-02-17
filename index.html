@@ -761,6 +761,69 @@
   </div>
 </div>
 
+
+<!-- ABOUT -->
+<div id="about" style="background: var(--accent);">
+  <div class="section" style="max-width:1100px; margin:0 auto;">
+    <div class="section-label" style="color:var(--gold);">About</div>
+    <div class="section-title" style="color:white; margin-bottom:40px;">How PianoScan works.</div>
+
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:24px;">
+
+      <div style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:4px; padding:32px;">
+        <div style="font-size:28px; margin-bottom:16px;">🤖</div>
+        <h3 style="font-family:'DM Serif Display',serif; font-size:20px; color:white; margin-bottom:10px;">AI Engine</h3>
+        <p style="font-size:14px; line-height:1.8; color:rgba(255,255,255,0.55);">
+          Uses a deep learning model trained on thousands of scores to detect notes, rhythms, and symbols. 
+          It handles imperfect images well — ideal for phone photos, slightly blurry scans, 
+          or handwritten scores where lighting isn't perfect. Takes 2–3 minutes.
+        </p>
+      </div>
+
+      <div style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:4px; padding:32px;">
+        <div style="font-size:28px; margin-bottom:16px;">🎯</div>
+        <h3 style="font-family:'DM Serif Display',serif; font-size:20px; color:white; margin-bottom:10px;">Precise Logic Engine</h3>
+        <p style="font-size:14px; line-height:1.8; color:rgba(255,255,255,0.55);">
+          A classical rule-based system that traces staff lines, note heads, and musical symbols 
+          with high precision. Works best on crisp, high-contrast images — think sharp phone scans 
+          or printed sheet music photographed in good light. Much faster at 30–60 seconds.
+        </p>
+      </div>
+
+      <div style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:4px; padding:32px;">
+        <div style="font-size:28px; margin-bottom:16px;">🧬</div>
+        <h3 style="font-family:'DM Serif Display',serif; font-size:20px; color:white; margin-bottom:10px;">Hybrid Engine</h3>
+        <p style="font-size:14px; line-height:1.8; color:rgba(255,255,255,0.55);">
+          Runs both engines and merges their results measure by measure, picking the best 
+          interpretation for each section. Experimental — results vary, but when it works 
+          it catches things neither engine would alone. Takes 3–4 minutes.
+        </p>
+      </div>
+
+      <div style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:4px; padding:32px;">
+        <div style="font-size:28px; margin-bottom:16px;">🎹</div>
+        <h3 style="font-family:'DM Serif Display',serif; font-size:20px; color:white; margin-bottom:10px;">What you get</h3>
+        <p style="font-size:14px; line-height:1.8; color:rgba(255,255,255,0.55);">
+          A standard MIDI file — the universal format for digital music. 
+          Play it back here in the browser, or import it into any DAW 
+          (GarageBand, Logic, Ableton), digital piano, or notation software like MuseScore. 
+          One page at a time, no account needed.
+        </p>
+      </div>
+
+    </div>
+
+    <div style="margin-top:32px; padding:24px 28px; background:rgba(201,168,76,0.1); border:1px solid rgba(201,168,76,0.25); border-radius:4px;">
+      <p style="font-size:14px; line-height:1.8; color:rgba(255,255,255,0.6);">
+        <span style="color:var(--gold); font-family:'DM Mono',monospace; font-size:11px; letter-spacing:0.1em;">TIP — </span>
+        Not sure which engine to pick? Start with <strong style="color:white;">Precise Logic</strong> if your image is clear and well-lit. 
+        Switch to <strong style="color:white;">AI</strong> if the result is missing notes or you're working with a lower quality photo. 
+        Use <strong style="color:white;">Hybrid</strong> if you want to experiment and don't mind the wait.
+      </p>
+    </div>
+  </div>
+</div>
+
 <!-- DEMO -->
 <div id="demo" class="demo-section">
   <div class="demo-inner">
@@ -782,10 +845,10 @@
     <div id="demo-card">
       <!-- UPLOAD ZONE -->
       <div class="upload-zone" id="upload-zone">
-        <input type="file" id="file-input" accept="image/*,.pdf">
+        <input type="file" id="file-input" accept="image/jpeg,image/png">
         <span class="upload-icon">🎼</span>
         <div class="upload-title">Drop your sheet music here</div>
-        <div class="upload-hint">JPEG, PNG, or PDF · One page · Max 10MB</div>
+        <div class="upload-hint">JPEG or PNG only · One page · Max 10MB</div>
       </div>
 
       <!-- PREVIEW -->
@@ -798,11 +861,11 @@
       <div class="engine-row">
         <button class="engine-pill" data-engine="oemer">
           <span class="pill-name">🤖 AI</span>
-          <span class="pill-time">2–3 min · Deep Learning</span>
+          <span class="pill-time">2–3 min · Best for blurry or phone photos</span>
         </button>
         <button class="engine-pill active" data-engine="audiveris">
           <span class="pill-name">🎯 Precise Logic</span>
-          <span class="pill-time">30–60 sec · Classical</span>
+          <span class="pill-time">30–60 sec · Best for sharp, clean scans</span>
         </button>
         <button class="engine-pill" data-engine="hybrid">
           <span class="pill-name">🧬 Hybrid</span>
