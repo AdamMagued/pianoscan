@@ -5,61 +5,54 @@ import fetch from 'node-fetch';
 
 export const config = {
   api: {
-    bodyParser: false, // Critical: Disables Next.js body parsing
+    bodyParser: false, // Required for formidable
   },
 };
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (req.method !== 'POST') return res.status(405).end();
+
+  const data = await new Promise((resolve, reject) => {
+    const form = new IncomingForm();
+    form.parse(req, (err, fields, files) => {
+      if (err) return reject(err);
+      resolve({ fields, files });
+    });
+  });
+
+  const file = data.files.file?.[0]  data.files.file;
+  const engine = data.fields.engine?.[0] 
+ 'audiveris';
+
+  if (!file) return res.status(400).json({ error: 'No file' });
+
+  const formData = new FormData();
+  formData.append('engine', engine);
+  formData.append('file', fs.createReadStream(file.filepath), {
+    filename: file.originalFilename,
+    contentType: file.mimetype,
+  });
 
   try {
-    // 1. Parse the file from the browser
-    const data = await new Promise((resolve, reject) => {
-      const form = new IncomingForm();
-      form.parse(req, (err, fields, files) => {
-        if (err) return reject(err);
-        resolve({ fields, files });
-      });
-    });
-
-    // 2. Get the file (support both old and new formidable structures)
-    const file = data.files.file?.[0] || data.files.file;
-    const engine = data.fields.engine?.[0] || 'homr';
-
-    if (!file) return res.status(400).json({ error: 'No file found' });
-
-    console.log(`[Vercel] Forwarding ${file.originalFilename} to Ngrok...`);
-
-    // 3. Prepare the form data for Python
-    const formData = new FormData();
-    formData.append('engine', engine);
-    formData.append('file', fs.createReadStream(file.filepath), {
-      filename: file.originalFilename,
-      contentType: file.mimetype,
-    });
-
-    // 4. Send to your PC via Ngrok
-    const response = await fetch('https://nonepisodically-influential-marya.ngrok-free.dev/scan', {
+    const upstream = await fetch('https://nonepisodically-influential-marya.ngrok-free.dev/scan', {
       method: 'POST',
       headers: {
         'X-API-Key': 'GUC_Super_Secret_Key_2026',
-        ...formData.getHeaders(), // CRITICAL: This fixes the "no posts" error
+        ...formData.getHeaders(), // Critical for file upload boundary
       },
       body: formData,
+      timeout: 300000,
     });
 
-    // 5. Handle the response
-    if (!response.ok) {
-      const errorText = await response.text();
-      return res.status(response.status).json({ error: 'Python Error', details: errorText });
+    if (!upstream.ok) {
+      const err = await upstream.text();
+      return res.status(upstream.status).send(err);
     }
 
-    const midiBuffer = await response.arrayBuffer();
+    const midi = await upstream.arrayBuffer();
     res.setHeader('Content-Type', 'audio/midi');
-    res.send(Buffer.from(midiBuffer));
-
-  } catch (error) {
-    console.error('[Vercel Error]', error);
-    return res.status(500).json({ error: 'Proxy Error', details: error.message });
+    res.send(Buffer.from(midi));
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
 }
