@@ -1,87 +1,65 @@
-const formidable = require('formidable');
-const fs = require('fs');
-const FormData = require('form-data');
-const fetch = require('node-fetch'); // Ensure you have this: npm install node-fetch
+import { IncomingForm } from 'formidable';
+import FormData from 'form-data';
+import fs from 'fs';
+import fetch from 'node-fetch';
 
-// Disable Next.js body parsing so formidable can handle the file
-module.exports.config = {
+export const config = {
   api: {
-    bodyParser: false,
+    bodyParser: false, // Critical: Disables Next.js body parsing
   },
 };
 
-module.exports = async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+export default async function handler(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    // 1. Parse the Incoming Form (Browser -> Next.js)
-    const form = formidable({ keepExtensions: true });
-
-    const [fields, files] = await new Promise((resolve, reject) => {
+    // 1. Parse the file from the browser
+    const data = await new Promise((resolve, reject) => {
+      const form = new IncomingForm();
       form.parse(req, (err, fields, files) => {
-        if (err) reject(err);
-        resolve([fields, files]);
+        if (err) return reject(err);
+        resolve({ fields, files });
       });
     });
 
-    // 2. Extract File and Engine
-    // Support both array (new formidable) and object (old formidable) formats
-    const uploadedFile = Array.isArray(files.file) ? files.file[0] : files.file;
-    const engine = Array.isArray(fields.engine) ? fields.engine[0] : (fields.engine || 'homr');
+    // 2. Get the file (support both old and new formidable structures)
+    const file = data.files.file?.[0] || data.files.file;
+    const engine = data.fields.engine?.[0] || 'homr';
 
-    if (!uploadedFile) {
-      console.error("❌ Node Error: No file found in request");
-      return res.status(400).json({ error: 'No file uploaded' });
-    }
+    if (!file) return res.status(400).json({ error: 'No file found' });
 
-    console.log([Node] Processing ${uploadedFile.originalFilename} for Engine: ${engine});
+    console.log(`[Vercel] Forwarding ${file.originalFilename} to Ngrok...`);
 
-    // 3. Prepare Payload (Next.js -> Python/Ngrok)
+    // 3. Prepare the form data for Python
     const formData = new FormData();
     formData.append('engine', engine);
-    formData.append('file', fs.createReadStream(uploadedFile.filepath), {
-      filename: uploadedFile.originalFilename,
-      contentType: uploadedFile.mimetype,
+    formData.append('file', fs.createReadStream(file.filepath), {
+      filename: file.originalFilename,
+      contentType: file.mimetype,
     });
 
-    // 4. Send to Python via Ngrok
-    const pythonUrl = 'https://nonepisodically-influential-marya.ngrok-free.dev/scan';
-
-    console.log([Node] Forwarding to: ${pythonUrl});
-
-    const pythonResponse = await fetch(pythonUrl, {
+    // 4. Send to your PC via Ngrok
+    const response = await fetch('https://nonepisodically-influential-marya.ngrok-free.dev/scan', {
       method: 'POST',
       headers: {
         'X-API-Key': 'GUC_Super_Secret_Key_2026',
-        ...formData.getHeaders(), // CRITICAL: Adds the boundary string
+        ...formData.getHeaders(), // CRITICAL: This fixes the "no posts" error
       },
       body: formData,
-      timeout: 300000, // 5 minutes for HOMR
     });
 
-    // 5. Check Python Response
-    if (!pythonResponse.ok) {
-      const errorText = await pythonResponse.text();
-      console.error(❌ Python Error (${pythonResponse.status}):, errorText);
-      return res.status(pythonResponse.status).json({ 
-        error: 'Python Server Error', 
-        details: errorText 
-      });
+    // 5. Handle the response
+    if (!response.ok) {
+      const errorText = await response.text();
+      return res.status(response.status).json({ error: 'Python Error', details: errorText });
     }
 
-    // 6. Success! Stream MIDI back to browser
-    console.log("✅ Success! MIDI received from Python.");
-    const midiBuffer = await pythonResponse.arrayBuffer();
+    const midiBuffer = await response.arrayBuffer();
     res.setHeader('Content-Type', 'audio/midi');
     res.send(Buffer.from(midiBuffer));
 
   } catch (error) {
-    console.error('❌ Node Proxy Crash:', error);
-    return res.status(500).json({ 
-      error: 'Website Proxy Error', 
-      details: error.message 
-    });
+    console.error('[Vercel Error]', error);
+    return res.status(500).json({ error: 'Proxy Error', details: error.message });
   }
-};
+}
