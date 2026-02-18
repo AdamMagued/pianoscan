@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PianoScan — Sheet Music to MIDI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/soundfont-player@0.12.0/dist/soundfont-player.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tonejs/midi@2.0.27/build/Midi.js"></script>
+<style>
+  :root {
+    --ink: #0d0d14;
+    --paper: #f5f3ef;
+    --cream: #faf8f4;
+    --accent: #2d1b69;
+    --gold: #c9a84c;
+    --gold-light: #e8c96a;
+    --mid: #6b5b9e;
+    --soft: #ede9ff;
+    --border: rgba(45,27,105,0.15);
+    --shadow: rgba(45,27,105,0.12);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'Outfit', sans-serif; background: var(--cream); color: var(--ink); min-height: 100vh; overflow-x: hidden; }
+  body::before { content: ''; position: fixed; inset: 0; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E"); pointer-events: none; z-index: 1000; opacity: 0.4; }
+  .hero { min-height: 100vh; display: grid; grid-template-rows: auto 1fr auto; position: relative; overflow: hidden; }
+  .hero-bg { position: absolute; inset: 0; background: radial-gradient(ellipse 80% 60% at 60% -10%, rgba(90,60,180,0.18) 0%, transparent 60%), radial-gradient(ellipse 60% 40% at -10% 80%, rgba(201,168,76,0.12) 0%, transparent 50%), var(--cream); z-index: 0; }
+  .staff-lines { position: absolute; width: 100%; top: 38%; left: 0; z-index: 0; opacity: 0.07; pointer-events: none; }
+  .staff-lines span { display: block; height: 1px; background: var(--accent); margin: 12px 0; }
+  nav { position: relative; z-index: 10; display: flex; align-items: center; justify-content: space-between; padding: 28px 48px; }
+  .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+  .logo-mark { width: 36px; height: 36px; background: var(--accent); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+  .logo-text { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--accent); letter-spacing: -0.02em; }
+  .nav-badge { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--mid); background: var(--soft); border: 1px solid var(--border); padding: 6px 14px; border-radius: 100px; letter-spacing: 0.05em; }
+  .hero-content { position: relative; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 0 24px 40px; }
+  .eyebrow { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.15em; color: var(--gold); text-transform: uppercase; margin-bottom: 24px; display: flex; align-items: center; gap: 10px; }
+  .eyebrow::before, .eyebrow::after { content: ''; display: block; width: 32px; height: 1px; background: var(--gold); opacity: 0.5; }
+  h1 { font-family: 'DM Serif Display', serif; font-size: clamp(42px, 7vw, 88px); line-height: 1.0; color: var(--accent); letter-spacing: -0.03em; margin-bottom: 12px; }
+  h1 em { font-style: italic; color: var(--mid); }
+  .hero-sub { font-size: 18px; font-weight: 300; color: var(--ink); opacity: 0.6; max-width: 460px; line-height: 1.6; margin-bottom: 48px; }
+  .cta-group { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .btn-primary { background: var(--accent); color: white; border: none; padding: 16px 36px; border-radius: 4px; font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s; letter-spacing: 0.01em; text-decoration: none; display: inline-block; }
+  .btn-primary:hover { background: #1e1145; transform: translateY(-1px); box-shadow: 0 8px 24px var(--shadow); }
+  .btn-ghost { background: transparent; color: var(--accent); border: 1.5px solid var(--border); padding: 15px 28px; border-radius: 4px; font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 500; cursor: pointer; transition: all 0.2s; text-decoration: none; display: inline-block; }
+  .btn-ghost:hover { background: var(--soft); }
+  .scroll-cue { position: relative; z-index: 10; display: flex; flex-direction: column; align-items: center; gap: 8px; padding-bottom: 36px; opacity: 0.4; animation: bob 2s ease-in-out infinite; }
+  .scroll-cue span { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: var(--accent); text-transform: uppercase; }
+  .scroll-arrow { width: 20px; height: 20px; border-right: 1.5px solid var(--accent); border-bottom: 1.5px solid var(--accent); transform: rotate(45deg); margin-top: -10px; }
+  @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(6px); } }
+  .section { padding: 100px 48px; max-width: 1100px; margin: 0 auto; }
+  .section-label { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.15em; color: var(--gold); text-transform: uppercase; margin-bottom: 16px; }
+  .section-title { font-family: 'DM Serif Display', serif; font-size: clamp(28px, 4vw, 48px); color: var(--accent); letter-spacing: -0.02em; margin-bottom: 60px; line-height: 1.15; }
+  .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; }
+  .step { padding: 36px 32px 40px; background: white; border-radius: 4px; position: relative; overflow: hidden; border: 1px solid var(--border); transition: box-shadow 0.2s, transform 0.2s; }
+  .step:hover { transform: translateY(-3px); box-shadow: 0 16px 40px var(--shadow); }
+  .step::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, var(--accent), var(--mid)); opacity: 0; transition: opacity 0.2s; }
+  .step:hover::after { opacity: 1; }
+  .step-num { font-family: 'DM Serif Display', serif; font-size: 72px; color: var(--accent); opacity: 0.06; line-height: 1; position: absolute; top: 16px; right: 24px; }
+  .step-icon-wrap { width: 52px; height: 52px; background: var(--soft); border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 24px; }
+  .step-icon { font-size: 26px; }
+  .step h3 { font-size: 17px; font-weight: 700; color: var(--accent); margin-bottom: 10px; letter-spacing: -0.01em; }
+  .step p { font-size: 14px; line-height: 1.7; color: var(--ink); opacity: 0.58; }
+  .demo-section { background: var(--accent); padding: 80px 48px; position: relative; overflow: hidden; }
+  .demo-section::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 60% 80% at 90% 50%, rgba(201,168,76,0.15) 0%, transparent 60%); pointer-events: none; }
+  .demo-inner { max-width: 780px; margin: 0 auto; position: relative; z-index: 1; }
+  .demo-section .section-label { color: var(--gold); }
+  .demo-section .section-title { color: white; margin-bottom: 12px; }
+  .demo-sub { color: rgba(255,255,255,0.55); font-size: 15px; margin-bottom: 40px; }
+  .tries-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; padding: 16px 20px; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12); border-radius: 4px; }
+  .tries-label { font-family: 'DM Mono', monospace; font-size: 12px; color: rgba(255,255,255,0.6); letter-spacing: 0.05em; }
+  .tries-dots { display: flex; gap: 8px; }
+  .try-dot { width: 28px; height: 8px; border-radius: 2px; background: rgba(255,255,255,0.15); transition: background 0.3s; }
+  .try-dot.used { background: var(--gold); }
+
+  /* UPLOAD ZONE — now has two tabs */
+  .upload-tabs { display: flex; gap: 0; margin-bottom: 0; }
+  .upload-tab { flex: 1; padding: 10px; background: rgba(255,255,255,0.04); border: 1.5px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.5); font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; text-align: center; letter-spacing: 0.02em; }
+  .upload-tab:first-child { border-radius: 4px 0 0 0; border-right: none; }
+  .upload-tab:last-child { border-radius: 0 4px 0 0; }
+  .upload-tab.active { background: rgba(255,255,255,0.10); border-color: var(--gold); color: white; }
+  .upload-zone { border: 1.5px dashed rgba(255,255,255,0.25); border-top: none; border-radius: 0 0 4px 4px; padding: 48px 32px; text-align: center; cursor: pointer; transition: all 0.25s; position: relative; background: rgba(255,255,255,0.04); }
+  .upload-zone:hover, .upload-zone.drag-over { border-color: var(--gold); background: rgba(201,168,76,0.07); }
+  .upload-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .upload-icon { font-size: 40px; margin-bottom: 16px; display: block; }
+  .upload-title { font-size: 17px; font-weight: 600; color: white; margin-bottom: 6px; }
+  .upload-hint { font-size: 13px; color: rgba(255,255,255,0.45); }
+
+  .preview-wrap { display: none; margin-top: 20px; border-radius: 4px; overflow: hidden; border: 1px solid rgba(255,255,255,0.12); position: relative; }
+  .preview-wrap img { width: 100%; max-height: 300px; object-fit: contain; background: rgba(255,255,255,0.03); display: block; }
+  .preview-clear { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.5); border: none; color: white; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; }
+  .pdf-badge { position: absolute; top: 10px; left: 10px; background: var(--gold); color: var(--accent); font-family: 'DM Mono', monospace; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 3px; letter-spacing: 0.08em; display: none; }
+
+  .engine-row { display: flex; gap: 8px; margin: 20px 0; flex-wrap: wrap; }
+  .engine-pill { flex: 1; min-width: 100px; padding: 12px 16px; background: rgba(255,255,255,0.06); border: 1.5px solid rgba(255,255,255,0.12); border-radius: 4px; color: rgba(255,255,255,0.7); font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; text-align: center; }
+  .engine-pill .pill-name { font-weight: 600; color: white; display: block; margin-bottom: 2px; }
+  .engine-pill .pill-time { font-family: 'DM Mono', monospace; font-size: 10px; color: rgba(255,255,255,0.35); }
+  .engine-pill.active { border-color: var(--gold); background: rgba(201,168,76,0.1); }
+  .engine-pill.active .pill-time { color: var(--gold-light); }
+
+  .scan-btn { width: 100%; margin-top: 20px; padding: 18px; background: var(--gold); color: var(--accent); border: none; border-radius: 4px; font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 700; cursor: pointer; transition: all 0.2s; letter-spacing: 0.01em; display: flex; align-items: center; justify-content: center; gap: 10px; }
+  .scan-btn:hover:not(:disabled) { background: var(--gold-light); transform: translateY(-1px); }
+  .scan-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+  .status-box { display: none; margin-top: 20px; padding: 18px 20px; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12); border-radius: 4px; }
+  .status-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); flex-shrink: 0; }
+  .status-dot.scanning { animation: pulse 1s ease-in-out infinite; }
+  .status-dot.error { background: #f87171; }
+  .status-dot.success { background: #4ade80; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+  .status-text { font-family: 'DM Mono', monospace; font-size: 13px; color: rgba(255,255,255,0.8); }
+  .progress-track { height: 3px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold-light)); border-radius: 2px; width: 0%; transition: width 0.4s ease; }
+  .result-box { display: none; margin-top: 20px; padding: 24px; background: rgba(255,255,255,0.05); border: 1px solid rgba(201,168,76,0.3); border-radius: 4px; }
+  .result-label { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.12em; color: var(--gold); text-transform: uppercase; margin-bottom: 16px; }
+  .download-btn { display: inline-flex; align-items: center; gap: 8px; margin-top: 16px; padding: 10px 20px; background: rgba(201,168,76,0.15); border: 1px solid rgba(201,168,76,0.3); border-radius: 4px; color: var(--gold-light); font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; text-decoration: none; transition: all 0.2s; }
+  .download-btn:hover { background: rgba(201,168,76,0.25); }
+  .no-tries { display: none; text-align: center; padding: 48px 32px; background: rgba(255,255,255,0.04); border: 1.5px dashed rgba(255,255,255,0.15); border-radius: 4px; }
+  .no-tries h3 { font-family: 'DM Serif Display', serif; font-size: 28px; color: white; margin-bottom: 12px; }
+  .no-tries p { color: rgba(255,255,255,0.5); font-size: 15px; }
+  footer { padding: 48px; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+  .footer-left { font-family: 'DM Serif Display', serif; font-size: 20px; color: var(--accent); }
+  .footer-right { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--ink); opacity: 0.35; letter-spacing: 0.05em; }
+  .fade-up { opacity: 0; transform: translateY(24px); animation: fadeUp 0.7s ease forwards; }
+  @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+  .delay-1 { animation-delay: 0.1s; } .delay-2 { animation-delay: 0.22s; } .delay-3 { animation-delay: 0.34s; }
+  @media (max-width: 700px) { nav { padding: 20px 24px; } .section { padding: 60px 24px; } .demo-section { padding: 60px 24px; } footer { padding: 32px 24px; flex-direction: column; align-items: flex-start; } .steps { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="staff-lines" aria-hidden="true">
+    <span></span><span></span><span></span><span></span><span></span>
+    <span></span><span></span><span></span><span></span><span></span>
+  </div>
+  <nav>
+    <a href="#" class="logo">
+      <div class="logo-mark">𝄞</div>
+      <span class="logo-text">PianoScan</span>
+    </a>
+    <span class="nav-badge">EARLY ACCESS DEMO</span>
+  </nav>
+  <div class="hero-content">
+    <div class="eyebrow fade-up">AI Sheet Music Recognition</div>
+    <h1 class="fade-up delay-1">Sheet music,<br><em>instantly playable.</em></h1>
+    <p class="hero-sub fade-up delay-2">Upload a photo or PDF of any score and get a playable MIDI file in under a minute. No music theory required.</p>
+    <div class="cta-group fade-up delay-3">
+      <a href="#demo" class="btn-primary" onclick="event.preventDefault();document.getElementById('demo').scrollIntoView({behavior:'smooth'})">Try it free →</a>
+      <a href="#how" class="btn-ghost">How it works</a>
+    </div>
+  </div>
+  <div class="scroll-cue" aria-hidden="true">
+    <span>Scroll</span>
+    <div class="scroll-arrow"></div>
+  </div>
+</section>
+
+<div id="how">
+  <div class="section">
+    <div class="section-label">Process</div>
+    <div class="section-title">Three steps.<br>One playable MIDI.</div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">01</div>
+        <div class="step-icon-wrap"><span class="step-icon">📷</span></div>
+        <h3>Upload your score</h3>
+        <p>A photo from your phone, a scanned image, or a PDF. One page at a time.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <div class="step-icon-wrap"><span class="step-icon">🧠</span></div>
+        <h3>Choose your engine</h3>
+        <p>Precise Logic for clean PDFs and prints, Transformer AI for complex piano, or Deep Learning for phone photos.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <div class="step-icon-wrap"><span class="step-icon">🎹</span></div>
+        <h3>Play it back</h3>
+        <p>Listen directly in the browser and download the MIDI for any DAW or digital piano.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="about" style="background: var(--accent);">
+  <div class="section" style="max-width:1100px; margin:0 auto;">
+    <div class="section-label" style="color:var(--gold);">About</div>
+    <div class="section-title" style="color:white; margin-bottom:40px;">How PianoScan works.</div>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:24px;">
+      <div style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:4px; padding:32px;">
+        <div style="font-size:28px; margin-bottom:16px;">🎯</div>
+        <h3 style="font-family:'DM Serif Display',serif; font-size:20px; color:white; margin-bottom:10px;">Precise Logic Engine</h3>
+        <p style="font-size:14px; line-height:1.8; color:rgba(255,255,255,0.55);">A classical rule-based system that traces staff lines, note heads, and symbols with high precision. Works best on clean PDFs and sharp prints. Fastest option at 30–60 seconds.</p>
+      </div>
+      <div style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:4px; padding:32px;">
+        <div style="font-size:28px; margin-bottom:16px;">🧬</div>
+        <h3 style="font-family:'DM Serif Display',serif; font-size:20px; color:white; margin-bottom:10px;">Transformer AI</h3>
+        <p style="font-size:14px; line-height:1.8; color:rgba(255,255,255,0.55);">Uses HOMR, a TrOMR neural network purpose-built for polyphonic piano scores. Best accuracy on dense, complex pieces. Takes 2–3 minutes.</p>
+      </div>
+      <div style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:4px; padding:32px;">
+        <div style="font-size:28px; margin-bottom:16px;">🤖</div>
+        <h3 style="font-family:'DM Serif Display',serif; font-size:20px; color:white; margin-bottom:10px;">Deep Learning</h3>
+        <p style="font-size:14px; line-height:1.8; color:rgba(255,255,255,0.55);">GPU-accelerated deep learning model trained on thousands of scores. Handles imperfect images well — good for phone photos and slightly blurry scans. Takes 2–3 minutes.</p>
+      </div>
+      <div style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:4px; padding:32px;">
+        <div style="font-size:28px; margin-bottom:16px;">🎹</div>
+        <h3 style="font-family:'DM Serif Display',serif; font-size:20px; color:white; margin-bottom:10px;">What you get</h3>
+        <p style="font-size:14px; line-height:1.8; color:rgba(255,255,255,0.55);">A standard MIDI file — the universal format for digital music. Play it back here, or import it into GarageBand, Logic, Ableton, or MuseScore. One page at a time, no account needed.</p>
+      </div>
+    </div>
+    <div style="margin-top:32px; padding:24px 28px; background:rgba(201,168,76,0.1); border:1px solid rgba(201,168,76,0.25); border-radius:4px;">
+      <p style="font-size:14px; line-height:1.8; color:rgba(255,255,255,0.6);">
+        <span style="color:var(--gold); font-family:'DM Mono',monospace; font-size:11px; letter-spacing:0.1em;">TIP — </span>
+        Start with <strong style="color:white;">Precise Logic</strong> for PDFs and clean prints. Use <strong style="color:white;">Transformer AI</strong> for complex piano pieces where every note matters. Switch to <strong style="color:white;">Deep Learning</strong> for phone photos or handwritten scores.
+      </p>
+    </div>
+  </div>
+</div>
+
+<div id="demo" class="demo-section">
+  <div class="demo-inner">
+    <div class="section-label">Live Demo</div>
+    <div class="section-title">Try it yourself.</div>
+    <p class="demo-sub">3 free scans per browser. No sign-up needed.</p>
+
+    <div class="tries-bar">
+      <span class="tries-label">FREE SCANS REMAINING</span>
+      <div class="tries-dots">
+        <div class="try-dot" id="dot0"></div>
+        <div class="try-dot" id="dot1"></div>
+        <div class="try-dot" id="dot2"></div>
+      </div>
+    </div>
+
+    <div id="demo-card">
+      <!-- UPLOAD TABS -->
+      <div class="upload-tabs">
+        <button class="upload-tab active" id="tab-image" onclick="switchTab('image')">📷 Photo / Image</button>
+        <button class="upload-tab" id="tab-pdf" onclick="switchTab('pdf')">📄 PDF</button>
+      </div>
+
+      <!-- UPLOAD ZONE -->
+      <div class="upload-zone" id="upload-zone">
+        <input type="file" id="file-input" accept="image/jpeg,image/png">
+        <span class="upload-icon" id="upload-icon">🎼</span>
+        <div class="upload-title" id="upload-title">Drop your sheet music here</div>
+        <div class="upload-hint" id="upload-hint">JPEG or PNG · One page · Max 10MB</div>
+      </div>
+
+      <!-- PREVIEW -->
+      <div class="preview-wrap" id="preview-wrap">
+        <img id="preview-img" src="" alt="Preview">
+        <div class="pdf-badge" id="pdf-badge">PDF</div>
+        <button class="preview-clear" id="clear-btn" title="Remove">✕</button>
+      </div>
+
+      <!-- ENGINE SELECT -->
+      <div class="engine-row">
+        <button class="engine-pill active" data-engine="audiveris">
+          <span class="pill-name">🎯 Precise Logic</span>
+          <span class="pill-time">30–60 sec · Best for PDFs & clean prints</span>
+        </button>
+        <button class="engine-pill" data-engine="homr">
+          <span class="pill-name">🧬 Transformer AI</span>
+          <span class="pill-time">2–3 min · Best accuracy for complex piano</span>
+        </button>
+        <button class="engine-pill" data-engine="oemer">
+          <span class="pill-name">🤖 Deep Learning</span>
+          <span class="pill-time">2–3 min · Best for phone photos</span>
+        </button>
+      </div>
+
+      <button class="scan-btn" id="scan-btn" disabled>
+        <span id="scan-icon">𝄞</span>
+        <span id="scan-text">Select a file to scan</span>
+      </button>
+
+      <div class="status-box" id="status-box">
+        <div class="status-row">
+          <div class="status-dot scanning" id="status-dot"></div>
+          <div class="status-text" id="status-text">Initializing…</div>
+        </div>
+        <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+      </div>
+
+      <div class="result-box" id="result-box">
+        <div class="result-label">✓ Scan complete — play below</div>
+        <div style="background:rgba(0,0,0,0.2); border-radius:4px; padding:20px; margin-bottom:12px;">
+          <div style="display:flex; align-items:center; gap:16px; margin-bottom:16px;">
+            <button id="play-btn" onclick="togglePlay()" style="width:48px;height:48px;border-radius:50%;background:var(--gold);border:none;cursor:pointer;font-size:18px;flex-shrink:0;color:#1a0a3d;font-weight:bold;display:flex;align-items:center;justify-content:center;">▶</button>
+            <button onclick="stopPlay()" style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.1);border:none;cursor:pointer;font-size:14px;flex-shrink:0;color:white;">⏹</button>
+            <div style="flex:1;">
+              <div style="height:6px;background:rgba(255,255,255,0.1);border-radius:3px;cursor:pointer;position:relative;" id="seek-bar" onclick="seekBar(event)">
+                <div id="seek-fill" style="height:100%;width:0%;background:var(--gold);border-radius:3px;pointer-events:none;"></div>
+              </div>
+              <div style="display:flex;justify-content:space-between;margin-top:6px;">
+                <span id="time-current" style="font-family:'DM Mono',monospace;font-size:11px;color:rgba(255,255,255,0.4);">0:00</span>
+                <span id="time-total" style="font-family:'DM Mono',monospace;font-size:11px;color:rgba(255,255,255,0.4);">0:00</span>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:14px;">
+            <span style="font-family:'DM Mono',monospace;font-size:11px;color:rgba(255,255,255,0.45);letter-spacing:0.08em;white-space:nowrap;">SPEED</span>
+            <input type="range" id="speed-slider" min="0.5" max="2" step="0.1" value="1" oninput="changeSpeed(this.value)" style="flex:1;accent-color:var(--gold);">
+            <span id="speed-label" style="font-family:'DM Mono',monospace;font-size:12px;color:var(--gold-light);min-width:34px;text-align:right;">1.0x</span>
+          </div>
+        </div>
+        <a id="download-link" class="download-btn" download="pianoscan.mid">⬇ Download MIDI</a>
+      </div>
+    </div>
+
+    <div class="no-tries" id="no-tries">
+      <h3>You've used all 3 free scans.</h3>
+      <p style="margin-top:8px">The full app is coming soon to iOS.</p>
+      <p style="margin-top:24px; font-family:'DM Mono',monospace; font-size:12px; color:rgba(255,255,255,0.3);">WAITLIST OPENS SOON</p>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-left">PianoScan</div>
+  <div class="footer-right">EARLY ACCESS · 2026</div>
+</footer>
+
+<script>
+  const SERVER_URL = '/api/scan';
+  const MAX_TRIES  = 3;
+
+  let selectedFile = null;
+  let selectedEngine = 'audiveris';
+  let currentTab = 'image';          // 'image' | 'pdf'
+  let triesUsed = parseInt(localStorage.getItem('ps_tries') || '0');
+  let midiBlob = null;
+
+  const uploadZone  = document.getElementById('upload-zone');
+  const fileInput   = document.getElementById('file-input');
+  const previewWrap = document.getElementById('preview-wrap');
+  const previewImg  = document.getElementById('preview-img');
+  const pdfBadge    = document.getElementById('pdf-badge');
+  const clearBtn    = document.getElementById('clear-btn');
+  const scanBtn     = document.getElementById('scan-btn');
+  const scanText    = document.getElementById('scan-text');
+  const scanIcon    = document.getElementById('scan-icon');
+  const statusBox   = document.getElementById('status-box');
+  const statusDot   = document.getElementById('status-dot');
+  const statusText  = document.getElementById('status-text');
+  const progressFill= document.getElementById('progress-fill');
+  const resultBox   = document.getElementById('result-box');
+  const downloadLink= document.getElementById('download-link');
+  const demoCard    = document.getElementById('demo-card');
+  const noTries     = document.getElementById('no-tries');
+
+  function init() {
+    updateDots();
+    if (triesUsed >= MAX_TRIES) showNoTries();
+  }
+  function updateDots() {
+    for (let i = 0; i < MAX_TRIES; i++) {
+      document.getElementById('dot' + i).classList.toggle('used', i < triesUsed);
+    }
+  }
+  function showNoTries() {
+    demoCard.style.display = 'none';
+    noTries.style.display = 'block';
+  }
+
+  // --- Tab switching ---
+  function switchTab(tab) {
+    currentTab = tab;
+    clearFile();
+    document.getElementById('tab-image').classList.toggle('active', tab === 'image');
+    document.getElementById('tab-pdf').classList.toggle('active', tab === 'pdf');
+    if (tab === 'image') {
+      fileInput.accept = 'image/jpeg,image/png';
+      document.getElementById('upload-icon').textContent = '🎼';
+      document.getElementById('upload-title').textContent = 'Drop your sheet music here';
+      document.getElementById('upload-hint').textContent = 'JPEG or PNG · One page · Max 10MB';
+    } else {
+      fileInput.accept = 'application/pdf';
+      document.getElementById('upload-icon').textContent = '📄';
+      document.getElementById('upload-title').textContent = 'Drop your PDF here';
+      document.getElementById('upload-hint').textContent = 'PDF · First page will be scanned · Max 20MB';
+    }
+  }
+
+  // --- Engine pills ---
+  document.querySelectorAll('.engine-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      document.querySelectorAll('.engine-pill').forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      selectedEngine = pill.dataset.engine;
+    });
+  });
+
+  // --- File handling ---
+  fileInput.addEventListener('change', e => handleFile(e.target.files[0]));
+  uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+  uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+  uploadZone.addEventListener('drop', e => {
+    e.preventDefault();
+    uploadZone.classList.remove('drag-over');
+    handleFile(e.dataTransfer.files[0]);
+  });
+
+  function handleFile(file) {
+    if (!file) return;
+    selectedFile = file;
+
+    if (file.type === 'application/pdf') {
+      // Show PDF icon as preview — no image rendering in browser without PDF.js
+      previewImg.src = '';
+      previewImg.style.display = 'none';
+      pdfBadge.style.display = 'block';
+      previewWrap.style.display = 'block';
+      // Show filename instead of image
+      const nameEl = document.createElement('div');
+      nameEl.id = 'pdf-name';
+      nameEl.style.cssText = 'padding:40px 20px; text-align:center; color:rgba(255,255,255,0.8); font-size:15px; font-weight:600;';
+      nameEl.textContent = '📄 ' + file.name;
+      const existing = document.getElementById('pdf-name');
+      if (existing) existing.remove();
+      previewWrap.insertBefore(nameEl, clearBtn);
+    } else {
+      // Image — show preview
+      previewImg.style.display = 'block';
+      pdfBadge.style.display = 'none';
+      document.getElementById('pdf-name')?.remove();
+      const reader = new FileReader();
+      reader.onload = e => { previewImg.src = e.target.result; };
+      reader.readAsDataURL(file);
+      previewWrap.style.display = 'block';
+    }
+
+    scanBtn.disabled = false;
+    scanText.textContent = 'Scan this page';
+    resultBox.style.display = 'none';
+    statusBox.style.display = 'none';
+  }
+
+  function clearFile() {
+    selectedFile = null;
+    fileInput.value = '';
+    previewWrap.style.display = 'none';
+    previewImg.src = '';
+    previewImg.style.display = 'block';
+    pdfBadge.style.display = 'none';
+    document.getElementById('pdf-name')?.remove();
+    scanBtn.disabled = true;
+    scanText.textContent = 'Select a file to scan';
+    resultBox.style.display = 'none';
+    statusBox.style.display = 'none';
+  }
+  clearBtn.addEventListener('click', clearFile);
+
+  // --- Scan ---
+  scanBtn.addEventListener('click', () => {
+    if (!selectedFile || triesUsed >= MAX_TRIES) return;
+    doScan();
+  });
+
+  function setStatus(msg, state) {
+    statusBox.style.display = 'block';
+    statusText.textContent = msg;
+    statusDot.className = 'status-dot ' + (state || 'scanning');
+  }
+  function setProgress(pct) { progressFill.style.width = pct + '%'; }
+
+  async function doScan() {
+    scanBtn.disabled = true;
+    scanIcon.textContent = '⏳';
+    scanText.textContent = 'Processing…';
+    resultBox.style.display = 'none';
+    setStatus('Initializing engine…', 'scanning');
+    setProgress(5);
+
+    const messages = [
+      [15, 'Analyzing staff lines…'],
+      [35, 'Detecting notes and symbols…'],
+      [60, 'Converting to MIDI…'],
+      [80, selectedEngine === 'homr' ? 'Running Transformer inference…' : 'Finalizing output…'],
+    ];
+    let msgIdx = 0;
+    const progressTimer = setInterval(() => {
+      if (msgIdx < messages.length) {
+        setProgress(messages[msgIdx][0]);
+        setStatus(messages[msgIdx][1], 'scanning');
+        msgIdx++;
+      }
+    }, 1800);
+
+    const formData = new FormData();
+    formData.append('file', selectedFile, selectedFile.name);
+    formData.append('engine', selectedEngine);
+
+    try {
+      const timeout = selectedEngine === 'homr' ? 300000 : 180000;
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeout);
+
+      const response = await fetch(SERVER_URL, { method: 'POST', body: formData, signal: controller.signal });
+      clearTimeout(timer);
+      clearInterval(progressTimer);
+
+      if (!response.ok) throw new Error(`Server returned ${response.status}`);
+      const data = await response.arrayBuffer();
+      if (!data.byteLength) throw new Error('Empty response from server');
+
+      midiBlob = new Blob([data], { type: 'audio/midi' });
+      const url = URL.createObjectURL(midiBlob);
+      downloadLink.href = url;
+      await loadMidiForPlayback(midiBlob);
+
+      setProgress(100);
+      setStatus('Scan complete!', 'success');
+      setTimeout(() => { statusBox.style.display = 'none'; resultBox.style.display = 'block'; }, 800);
+
+      triesUsed++;
+      localStorage.setItem('ps_tries', triesUsed);
+      updateDots();
+      if (triesUsed >= MAX_TRIES) setTimeout(showNoTries, 3000);
+
+    } catch (err) {
+      clearInterval(progressTimer);
+      setProgress(0);
+      setStatus(err.name === 'AbortError' ? 'Timed out — server took too long.' : 'Error: ' + err.message, 'error');
+      scanBtn.disabled = false;
+      scanIcon.textContent = '𝄞';
+      scanText.textContent = 'Try again';
+    }
+  }
+
+  init();
+
+  // ---- MIDI PLAYBACK ----
+  let midiData = null, pianoInstrument = null, isPlaying = false;
+  let playbackSpeed = 1.0, durationSecs = 0, startedAt = 0, pauseOffset = 0;
+  let scheduledTimeouts = [], rafId = null, audioCtx = null;
+
+  window.addEventListener('load', async () => {
+    try {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      pianoInstrument = await Soundfont.instrument(audioCtx, 'acoustic_grand_piano', { soundfont: 'FluidR3_GM', format: 'mp3' });
+    } catch(e) { console.warn('Soundfont load failed:', e); }
+  });
+
+  function fmt(s) { s = Math.max(0, s); const m = Math.floor(s/60), sec = Math.floor(s%60); return m + ':' + String(sec).padStart(2,'0'); }
+
+  async function loadMidiForPlayback(blob) {
+    const arrBuf = await blob.arrayBuffer();
+    midiData = new Midi(arrBuf);
+    durationSecs = midiData.duration;
+    pauseOffset = 0;
+    document.getElementById('time-total').textContent = fmt(durationSecs);
+    document.getElementById('time-current').textContent = '0:00';
+    document.getElementById('seek-fill').style.width = '0%';
+    document.getElementById('play-btn').textContent = '▶';
+    isPlaying = false;
+  }
+
+  function togglePlay() { if (!midiData) return; isPlaying ? pausePlayback() : startPlayback(pauseOffset); }
+
+  function startPlayback(fromSecs) {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    cancelAllScheduled();
+    isPlaying = true;
+    startedAt = performance.now() - (fromSecs * 1000 / playbackSpeed);
+    document.getElementById('play-btn').textContent = '⏸';
+    midiData.tracks.forEach(track => {
+      track.notes.forEach(note => {
+        if (note.time < fromSecs - 0.05) return;
+        const delayMs = ((note.time - fromSecs) / playbackSpeed) * 1000;
+        const durMs = (note.duration / playbackSpeed) * 1000;
+        const t = setTimeout(() => {
+          if (!isPlaying) return;
+          if (pianoInstrument) pianoInstrument.play(note.midi, audioCtx.currentTime, { duration: durMs / 1000, gain: (note.velocity || 0.7) * 1.5 });
+        }, Math.max(0, delayMs));
+        scheduledTimeouts.push(t);
+      });
+    });
+    const endT = setTimeout(() => stopPlay(), ((durationSecs - fromSecs) / playbackSpeed) * 1000);
+    scheduledTimeouts.push(endT);
+    tickUI();
+  }
+
+  function pausePlayback() {
+    pauseOffset = Math.min((performance.now() - startedAt) * playbackSpeed / 1000, durationSecs);
+    cancelAllScheduled(); isPlaying = false;
+    document.getElementById('play-btn').textContent = '▶';
+    cancelAnimationFrame(rafId);
+  }
+
+  function stopPlay() {
+    pauseOffset = 0; cancelAllScheduled(); isPlaying = false;
+    document.getElementById('play-btn').textContent = '▶';
+    document.getElementById('seek-fill').style.width = '0%';
+    document.getElementById('time-current').textContent = '0:00';
+    cancelAnimationFrame(rafId);
+  }
+
+  function cancelAllScheduled() {
+    scheduledTimeouts.forEach(t => clearTimeout(t));
+    scheduledTimeouts = [];
+    if (pianoInstrument) pianoInstrument.stop();
+  }
+
+  function tickUI() {
+    if (!isPlaying) return;
+    const elapsed = Math.min((performance.now() - startedAt) * playbackSpeed / 1000, durationSecs);
+    document.getElementById('seek-fill').style.width = (elapsed / durationSecs * 100) + '%';
+    document.getElementById('time-current').textContent = fmt(elapsed);
+    rafId = requestAnimationFrame(tickUI);
+  }
+
+  function seekBar(e) {
+    if (!midiData) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    pauseOffset = pct * durationSecs;
+    document.getElementById('seek-fill').style.width = (pct * 100) + '%';
+    document.getElementById('time-current').textContent = fmt(pauseOffset);
+    if (isPlaying) { cancelAllScheduled(); startPlayback(pauseOffset); }
+  }
+
+  function changeSpeed(val) {
+    const wasPlaying = isPlaying;
+    if (wasPlaying) { pauseOffset = Math.min((performance.now() - startedAt) * playbackSpeed / 1000, durationSecs); cancelAllScheduled(); isPlaying = false; }
+    playbackSpeed = parseFloat(val);
+    document.getElementById('speed-label').textContent = playbackSpeed.toFixed(1) + 'x';
+    if (wasPlaying) startPlayback(pauseOffset);
+  }
+</script>
+</body>
+</html>
