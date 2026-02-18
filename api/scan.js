@@ -5,7 +5,7 @@ import fetch from 'node-fetch';
 
 export const config = {
   api: {
-    bodyParser: false, // Critical: Disables Next.js body parsing
+    bodyParser: false,
   },
 };
 
@@ -24,11 +24,11 @@ export default async function handler(req, res) {
 
     // 2. Get the file (support both old and new formidable structures)
     const file = data.files.file?.[0] || data.files.file;
-    const engine = data.fields.engine?.[0] || 'homr';
+    const engine = data.fields.engine?.[0] || data.fields.engine || 'homr';
 
     if (!file) return res.status(400).json({ error: 'No file found' });
 
-    console.log(`[Vercel] Forwarding ${file.originalFilename} to Ngrok...`);
+    console.log(`[Vercel] Forwarding ${file.originalFilename} (engine: ${engine}) to backend...`);
 
     // 3. Prepare the form data for Python
     const formData = new FormData();
@@ -43,7 +43,7 @@ export default async function handler(req, res) {
       method: 'POST',
       headers: {
         'X-API-Key': 'GUC_Super_Secret_Key_2026',
-        ...formData.getHeaders(), // CRITICAL: This fixes the "no posts" error
+        ...formData.getHeaders(),
       },
       body: formData,
     });
@@ -51,7 +51,8 @@ export default async function handler(req, res) {
     // 5. Handle the response
     if (!response.ok) {
       const errorText = await response.text();
-      return res.status(response.status).json({ error: 'Python Error', details: errorText });
+      console.error(`[Vercel] Backend error ${response.status}:`, errorText);
+      return res.status(response.status).json({ error: 'Engine Error', details: errorText });
     }
 
     const midiBuffer = await response.arrayBuffer();

@@ -74,12 +74,14 @@
   .try-dot { width: 28px; height: 8px; border-radius: 2px; background: rgba(255,255,255,0.15); transition: background 0.3s; }
   .try-dot.used { background: var(--gold); }
 
-  /* UPLOAD ZONE — now has two tabs */
+  /* UPLOAD ZONE */
   .upload-tabs { display: flex; gap: 0; margin-bottom: 0; }
   .upload-tab { flex: 1; padding: 10px; background: rgba(255,255,255,0.04); border: 1.5px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.5); font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; text-align: center; letter-spacing: 0.02em; }
   .upload-tab:first-child { border-radius: 4px 0 0 0; border-right: none; }
   .upload-tab:last-child { border-radius: 0 4px 0 0; }
   .upload-tab.active { background: rgba(255,255,255,0.10); border-color: var(--gold); color: white; }
+  /* Disabled tab styling */
+  .upload-tab.disabled { opacity: 0.35; cursor: not-allowed; pointer-events: none; position: relative; }
   .upload-zone { border: 1.5px dashed rgba(255,255,255,0.25); border-top: none; border-radius: 0 0 4px 4px; padding: 48px 32px; text-align: center; cursor: pointer; transition: all 0.25s; position: relative; background: rgba(255,255,255,0.04); }
   .upload-zone:hover, .upload-zone.drag-over { border-color: var(--gold); background: rgba(201,168,76,0.07); }
   .upload-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
@@ -98,6 +100,13 @@
   .engine-pill .pill-time { font-family: 'DM Mono', monospace; font-size: 10px; color: rgba(255,255,255,0.35); }
   .engine-pill.active { border-color: var(--gold); background: rgba(201,168,76,0.1); }
   .engine-pill.active .pill-time { color: var(--gold-light); }
+  /* Disabled engine pill */
+  .engine-pill.disabled { opacity: 0.3; cursor: not-allowed; pointer-events: none; position: relative; }
+  .engine-pill.disabled .pill-name { color: rgba(255,255,255,0.4); }
+  .engine-pill.disabled .pill-time { color: rgba(255,255,255,0.2); }
+  .pill-badge { display: inline-block; font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: 0.08em; padding: 2px 6px; border-radius: 3px; margin-top: 4px; }
+  .pill-badge.down { background: rgba(248,113,113,0.2); color: #f87171; }
+  .pill-badge.soon { background: rgba(201,168,76,0.2); color: var(--gold-light); }
 
   .scan-btn { width: 100%; margin-top: 20px; padding: 18px; background: var(--gold); color: var(--accent); border: none; border-radius: 4px; font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 700; cursor: pointer; transition: all 0.2s; letter-spacing: 0.01em; display: flex; align-items: center; justify-content: center; gap: 10px; }
   .scan-btn:hover:not(:disabled) { background: var(--gold-light); transform: translateY(-1px); }
@@ -138,7 +147,7 @@
   </div>
   <nav>
     <a href="#" class="logo">
-      <div class="logo-mark">𝄞</div>
+      <div class="logo-mark">&#119070;</div>
       <span class="logo-text">PianoScan</span>
     </a>
     <span class="nav-badge">EARLY ACCESS DEMO</span>
@@ -146,9 +155,9 @@
   <div class="hero-content">
     <div class="eyebrow fade-up">AI Sheet Music Recognition</div>
     <h1 class="fade-up delay-1">Sheet music,<br><em>instantly playable.</em></h1>
-    <p class="hero-sub fade-up delay-2">Upload a photo or PDF of any score and get a playable MIDI file in under a minute. No music theory required.</p>
+    <p class="hero-sub fade-up delay-2">Upload a photo of any score and get a playable MIDI file in under a minute. No music theory required.</p>
     <div class="cta-group fade-up delay-3">
-      <a href="#demo" class="btn-primary" onclick="event.preventDefault();document.getElementById('demo').scrollIntoView({behavior:'smooth'})">Try it free →</a>
+      <a href="#demo" class="btn-primary" onclick="event.preventDefault();document.getElementById('demo').scrollIntoView({behavior:'smooth'})">Try it free &rarr;</a>
       <a href="#how" class="btn-ghost">How it works</a>
     </div>
   </div>
@@ -165,19 +174,19 @@
     <div class="steps">
       <div class="step">
         <div class="step-num">01</div>
-        <div class="step-icon-wrap"><span class="step-icon">📷</span></div>
+        <div class="step-icon-wrap"><span class="step-icon">&#128247;</span></div>
         <h3>Upload your score</h3>
-        <p>A photo from your phone, a scanned image, or a PDF. One page at a time.</p>
+        <p>A photo from your phone or a scanned image. One page at a time.</p>
       </div>
       <div class="step">
         <div class="step-num">02</div>
-        <div class="step-icon-wrap"><span class="step-icon">🧠</span></div>
+        <div class="step-icon-wrap"><span class="step-icon">&#129504;</span></div>
         <h3>Choose your engine</h3>
-        <p>Precise Logic for clean PDFs and prints, Transformer AI for complex piano, or Deep Learning for phone photos.</p>
+        <p>Transformer AI for complex piano, or Deep Learning for phone photos. More engines coming soon.</p>
       </div>
       <div class="step">
         <div class="step-num">03</div>
-        <div class="step-icon-wrap"><span class="step-icon">🎹</span></div>
+        <div class="step-icon-wrap"><span class="step-icon">&#127929;</span></div>
         <h3>Play it back</h3>
         <p>Listen directly in the browser and download the MIDI for any DAW or digital piano.</p>
       </div>
@@ -190,31 +199,32 @@
     <div class="section-label" style="color:var(--gold);">About</div>
     <div class="section-title" style="color:white; margin-bottom:40px;">How PianoScan works.</div>
     <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:24px;">
-      <div style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:4px; padding:32px;">
-        <div style="font-size:28px; margin-bottom:16px;">🎯</div>
+      <div style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:4px; padding:32px; opacity:0.4; position:relative;">
+        <div style="position:absolute; top:12px; right:12px; background:rgba(248,113,113,0.25); color:#f87171; font-family:'DM Mono',monospace; font-size:9px; padding:3px 8px; border-radius:3px; letter-spacing:0.08em;">TEMPORARILY DOWN</div>
+        <div style="font-size:28px; margin-bottom:16px;">&#127919;</div>
         <h3 style="font-family:'DM Serif Display',serif; font-size:20px; color:white; margin-bottom:10px;">Precise Logic Engine</h3>
-        <p style="font-size:14px; line-height:1.8; color:rgba(255,255,255,0.55);">A classical rule-based system that traces staff lines, note heads, and symbols with high precision. Works best on clean PDFs and sharp prints. Fastest option at 30–60 seconds.</p>
+        <p style="font-size:14px; line-height:1.8; color:rgba(255,255,255,0.55);">A classical rule-based system that traces staff lines, note heads, and symbols with high precision. Works best on clean PDFs and sharp prints. Currently undergoing maintenance.</p>
       </div>
       <div style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:4px; padding:32px;">
-        <div style="font-size:28px; margin-bottom:16px;">🧬</div>
+        <div style="font-size:28px; margin-bottom:16px;">&#129516;</div>
         <h3 style="font-family:'DM Serif Display',serif; font-size:20px; color:white; margin-bottom:10px;">Transformer AI</h3>
-        <p style="font-size:14px; line-height:1.8; color:rgba(255,255,255,0.55);">Uses HOMR, a TrOMR neural network purpose-built for polyphonic piano scores. Best accuracy on dense, complex pieces. Takes 2–3 minutes.</p>
+        <p style="font-size:14px; line-height:1.8; color:rgba(255,255,255,0.55);">Uses HOMR, a TrOMR neural network purpose-built for polyphonic piano scores. Best accuracy on dense, complex pieces. Takes 2&ndash;3 minutes.</p>
       </div>
       <div style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:4px; padding:32px;">
-        <div style="font-size:28px; margin-bottom:16px;">🤖</div>
+        <div style="font-size:28px; margin-bottom:16px;">&#129302;</div>
         <h3 style="font-family:'DM Serif Display',serif; font-size:20px; color:white; margin-bottom:10px;">Deep Learning</h3>
-        <p style="font-size:14px; line-height:1.8; color:rgba(255,255,255,0.55);">GPU-accelerated deep learning model trained on thousands of scores. Handles imperfect images well — good for phone photos and slightly blurry scans. Takes 2–3 minutes.</p>
+        <p style="font-size:14px; line-height:1.8; color:rgba(255,255,255,0.55);">GPU-accelerated deep learning model trained on thousands of scores. Handles imperfect images well &mdash; good for phone photos and slightly blurry scans. Takes 2&ndash;3 minutes.</p>
       </div>
       <div style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:4px; padding:32px;">
-        <div style="font-size:28px; margin-bottom:16px;">🎹</div>
+        <div style="font-size:28px; margin-bottom:16px;">&#127929;</div>
         <h3 style="font-family:'DM Serif Display',serif; font-size:20px; color:white; margin-bottom:10px;">What you get</h3>
-        <p style="font-size:14px; line-height:1.8; color:rgba(255,255,255,0.55);">A standard MIDI file — the universal format for digital music. Play it back here, or import it into GarageBand, Logic, Ableton, or MuseScore. One page at a time, no account needed.</p>
+        <p style="font-size:14px; line-height:1.8; color:rgba(255,255,255,0.55);">A standard MIDI file &mdash; the universal format for digital music. Play it back here, or import it into GarageBand, Logic, Ableton, or MuseScore. One page at a time, no account needed.</p>
       </div>
     </div>
     <div style="margin-top:32px; padding:24px 28px; background:rgba(201,168,76,0.1); border:1px solid rgba(201,168,76,0.25); border-radius:4px;">
       <p style="font-size:14px; line-height:1.8; color:rgba(255,255,255,0.6);">
-        <span style="color:var(--gold); font-family:'DM Mono',monospace; font-size:11px; letter-spacing:0.1em;">TIP — </span>
-        Start with <strong style="color:white;">Precise Logic</strong> for PDFs and clean prints. Use <strong style="color:white;">Transformer AI</strong> for complex piano pieces where every note matters. Switch to <strong style="color:white;">Deep Learning</strong> for phone photos or handwritten scores.
+        <span style="color:var(--gold); font-family:'DM Mono',monospace; font-size:11px; letter-spacing:0.1em;">TIP &mdash; </span>
+        Use <strong style="color:white;">Transformer AI</strong> for complex piano pieces where every note matters. Switch to <strong style="color:white;">Deep Learning</strong> for phone photos or handwritten scores. Precise Logic is temporarily offline and will return soon.
       </p>
     </div>
   </div>
@@ -238,60 +248,61 @@
     <div id="demo-card">
       <!-- UPLOAD TABS -->
       <div class="upload-tabs">
-        <button class="upload-tab active" id="tab-image" onclick="switchTab('image')">📷 Photo / Image</button>
-        <button class="upload-tab" id="tab-pdf" onclick="switchTab('pdf')">📄 PDF</button>
+        <button class="upload-tab active" id="tab-image" onclick="switchTab('image')">&#128247; Photo / Image</button>
+        <button class="upload-tab disabled" id="tab-pdf" title="PDF support coming soon">&#128196; PDF &middot; Coming Soon</button>
       </div>
 
       <!-- UPLOAD ZONE -->
       <div class="upload-zone" id="upload-zone">
         <input type="file" id="file-input" accept="image/jpeg,image/png">
-        <span class="upload-icon" id="upload-icon">🎼</span>
+        <span class="upload-icon" id="upload-icon">&#127932;</span>
         <div class="upload-title" id="upload-title">Drop your sheet music here</div>
-        <div class="upload-hint" id="upload-hint">JPEG or PNG · One page · Max 10MB</div>
+        <div class="upload-hint" id="upload-hint">JPEG or PNG &middot; One page &middot; Max 10MB</div>
       </div>
 
       <!-- PREVIEW -->
       <div class="preview-wrap" id="preview-wrap">
         <img id="preview-img" src="" alt="Preview">
         <div class="pdf-badge" id="pdf-badge">PDF</div>
-        <button class="preview-clear" id="clear-btn" title="Remove">✕</button>
+        <button class="preview-clear" id="clear-btn" title="Remove">&times;</button>
       </div>
 
       <!-- ENGINE SELECT -->
       <div class="engine-row">
-        <button class="engine-pill active" data-engine="audiveris">
-          <span class="pill-name">🎯 Precise Logic</span>
-          <span class="pill-time">30–60 sec · Best for PDFs & clean prints</span>
+        <button class="engine-pill disabled" data-engine="audiveris">
+          <span class="pill-name">&#127919; Precise Logic</span>
+          <span class="pill-time">Undergoing maintenance</span>
+          <span class="pill-badge down">TEMPORARILY DOWN</span>
         </button>
-        <button class="engine-pill" data-engine="homr">
-          <span class="pill-name">🧬 Transformer AI</span>
-          <span class="pill-time">2–3 min · Best accuracy for complex piano</span>
+        <button class="engine-pill active" data-engine="homr">
+          <span class="pill-name">&#129516; Transformer AI</span>
+          <span class="pill-time">2&ndash;3 min &middot; Best accuracy for complex piano</span>
         </button>
         <button class="engine-pill" data-engine="oemer">
-          <span class="pill-name">🤖 Deep Learning</span>
-          <span class="pill-time">2–3 min · Best for phone photos</span>
+          <span class="pill-name">&#129302; Deep Learning</span>
+          <span class="pill-time">2&ndash;3 min &middot; Best for phone photos</span>
         </button>
       </div>
 
       <button class="scan-btn" id="scan-btn" disabled>
-        <span id="scan-icon">𝄞</span>
+        <span id="scan-icon">&#119070;</span>
         <span id="scan-text">Select a file to scan</span>
       </button>
 
       <div class="status-box" id="status-box">
         <div class="status-row">
           <div class="status-dot scanning" id="status-dot"></div>
-          <div class="status-text" id="status-text">Initializing…</div>
+          <div class="status-text" id="status-text">Initializing&hellip;</div>
         </div>
         <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
       </div>
 
       <div class="result-box" id="result-box">
-        <div class="result-label">✓ Scan complete — play below</div>
+        <div class="result-label">&check; Scan complete &mdash; play below</div>
         <div style="background:rgba(0,0,0,0.2); border-radius:4px; padding:20px; margin-bottom:12px;">
           <div style="display:flex; align-items:center; gap:16px; margin-bottom:16px;">
-            <button id="play-btn" onclick="togglePlay()" style="width:48px;height:48px;border-radius:50%;background:var(--gold);border:none;cursor:pointer;font-size:18px;flex-shrink:0;color:#1a0a3d;font-weight:bold;display:flex;align-items:center;justify-content:center;">▶</button>
-            <button onclick="stopPlay()" style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.1);border:none;cursor:pointer;font-size:14px;flex-shrink:0;color:white;">⏹</button>
+            <button id="play-btn" onclick="togglePlay()" style="width:48px;height:48px;border-radius:50%;background:var(--gold);border:none;cursor:pointer;font-size:18px;flex-shrink:0;color:#1a0a3d;font-weight:bold;display:flex;align-items:center;justify-content:center;">&#9654;</button>
+            <button onclick="stopPlay()" style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.1);border:none;cursor:pointer;font-size:14px;flex-shrink:0;color:white;">&#9209;</button>
             <div style="flex:1;">
               <div style="height:6px;background:rgba(255,255,255,0.1);border-radius:3px;cursor:pointer;position:relative;" id="seek-bar" onclick="seekBar(event)">
                 <div id="seek-fill" style="height:100%;width:0%;background:var(--gold);border-radius:3px;pointer-events:none;"></div>
@@ -308,7 +319,7 @@
             <span id="speed-label" style="font-family:'DM Mono',monospace;font-size:12px;color:var(--gold-light);min-width:34px;text-align:right;">1.0x</span>
           </div>
         </div>
-        <a id="download-link" class="download-btn" download="pianoscan.mid">⬇ Download MIDI</a>
+        <a id="download-link" class="download-btn" download="pianoscan.mid">&#11015; Download MIDI</a>
       </div>
     </div>
 
@@ -322,7 +333,7 @@
 
 <footer>
   <div class="footer-left">PianoScan</div>
-  <div class="footer-right">EARLY ACCESS · 2026</div>
+  <div class="footer-right">EARLY ACCESS &middot; 2026</div>
 </footer>
 
 <script>
@@ -330,8 +341,7 @@
   const MAX_TRIES  = 3;
 
   let selectedFile = null;
-  let selectedEngine = 'audiveris';
-  let currentTab = 'image';          // 'image' | 'pdf'
+  let selectedEngine = 'homr';        // Default to HOMR (working engine)
   let triesUsed = parseInt(localStorage.getItem('ps_tries') || '0');
   let midiBlob = null;
 
@@ -367,35 +377,24 @@
     noTries.style.display = 'block';
   }
 
-  // --- Tab switching ---
+  // --- Tab switching (PDF is disabled) ---
   function switchTab(tab) {
-    currentTab = tab;
+    // Only image tab is active right now
+    if (tab === 'pdf') return;
     clearFile();
-    document.getElementById('tab-image').classList.toggle('active', tab === 'image');
-    document.getElementById('tab-pdf').classList.toggle('active', tab === 'pdf');
-    if (tab === 'image') {
-      fileInput.accept = 'image/jpeg,image/png';
-      document.getElementById('upload-icon').textContent = '🎼';
-      document.getElementById('upload-title').textContent = 'Drop your sheet music here';
-      document.getElementById('upload-hint').textContent = 'JPEG or PNG · One page · Max 10MB';
-    } else {
-      fileInput.accept = 'application/pdf';
-      document.getElementById('upload-icon').textContent = '📄';
-      document.getElementById('upload-title').textContent = 'Drop your PDF here';
-      document.getElementById('upload-hint').textContent = 'PDF · First page will be scanned · Max 20MB';
-    }
   }
 
-  // --- Engine pills ---
+  // --- Engine pills (skip disabled ones) ---
   document.querySelectorAll('.engine-pill').forEach(pill => {
     pill.addEventListener('click', () => {
+      if (pill.classList.contains('disabled')) return;
       document.querySelectorAll('.engine-pill').forEach(p => p.classList.remove('active'));
       pill.classList.add('active');
       selectedEngine = pill.dataset.engine;
     });
   });
 
-  // --- File handling ---
+  // --- File handling (images only) ---
   fileInput.addEventListener('change', e => handleFile(e.target.files[0]));
   uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
   uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
@@ -407,32 +406,20 @@
 
   function handleFile(file) {
     if (!file) return;
+    // Only accept images for now
+    if (!file.type.startsWith('image/')) {
+      alert('Only image files (JPEG, PNG) are supported right now. PDF support is coming soon!');
+      return;
+    }
     selectedFile = file;
 
-    if (file.type === 'application/pdf') {
-      // Show PDF icon as preview — no image rendering in browser without PDF.js
-      previewImg.src = '';
-      previewImg.style.display = 'none';
-      pdfBadge.style.display = 'block';
-      previewWrap.style.display = 'block';
-      // Show filename instead of image
-      const nameEl = document.createElement('div');
-      nameEl.id = 'pdf-name';
-      nameEl.style.cssText = 'padding:40px 20px; text-align:center; color:rgba(255,255,255,0.8); font-size:15px; font-weight:600;';
-      nameEl.textContent = '📄 ' + file.name;
-      const existing = document.getElementById('pdf-name');
-      if (existing) existing.remove();
-      previewWrap.insertBefore(nameEl, clearBtn);
-    } else {
-      // Image — show preview
-      previewImg.style.display = 'block';
-      pdfBadge.style.display = 'none';
-      document.getElementById('pdf-name')?.remove();
-      const reader = new FileReader();
-      reader.onload = e => { previewImg.src = e.target.result; };
-      reader.readAsDataURL(file);
-      previewWrap.style.display = 'block';
-    }
+    previewImg.style.display = 'block';
+    pdfBadge.style.display = 'none';
+    document.getElementById('pdf-name')?.remove();
+    const reader = new FileReader();
+    reader.onload = e => { previewImg.src = e.target.result; };
+    reader.readAsDataURL(file);
+    previewWrap.style.display = 'block';
 
     scanBtn.disabled = false;
     scanText.textContent = 'Scan this page';
@@ -470,17 +457,17 @@
 
   async function doScan() {
     scanBtn.disabled = true;
-    scanIcon.textContent = '⏳';
-    scanText.textContent = 'Processing…';
+    scanIcon.textContent = '\u23F3';
+    scanText.textContent = 'Processing\u2026';
     resultBox.style.display = 'none';
-    setStatus('Initializing engine…', 'scanning');
+    setStatus('Initializing engine\u2026', 'scanning');
     setProgress(5);
 
     const messages = [
-      [15, 'Analyzing staff lines…'],
-      [35, 'Detecting notes and symbols…'],
-      [60, 'Converting to MIDI…'],
-      [80, selectedEngine === 'homr' ? 'Running Transformer inference…' : 'Finalizing output…'],
+      [15, 'Analyzing staff lines\u2026'],
+      [35, 'Detecting notes and symbols\u2026'],
+      [60, 'Converting to MIDI\u2026'],
+      [80, selectedEngine === 'homr' ? 'Running Transformer inference\u2026' : 'Finalizing output\u2026'],
     ];
     let msgIdx = 0;
     const progressTimer = setInterval(() => {
@@ -504,7 +491,7 @@
       clearTimeout(timer);
       clearInterval(progressTimer);
 
-      if (!response.ok) throw new Error(`Server returned ${response.status}`);
+      if (!response.ok) throw new Error('Server returned ' + response.status);
       const data = await response.arrayBuffer();
       if (!data.byteLength) throw new Error('Empty response from server');
 
@@ -525,9 +512,9 @@
     } catch (err) {
       clearInterval(progressTimer);
       setProgress(0);
-      setStatus(err.name === 'AbortError' ? 'Timed out — server took too long.' : 'Error: ' + err.message, 'error');
+      setStatus(err.name === 'AbortError' ? 'Timed out \u2014 server took too long.' : 'Error: ' + err.message, 'error');
       scanBtn.disabled = false;
-      scanIcon.textContent = '𝄞';
+      scanIcon.textContent = '\uD834\uDD1E';
       scanText.textContent = 'Try again';
     }
   }
@@ -556,7 +543,7 @@
     document.getElementById('time-total').textContent = fmt(durationSecs);
     document.getElementById('time-current').textContent = '0:00';
     document.getElementById('seek-fill').style.width = '0%';
-    document.getElementById('play-btn').textContent = '▶';
+    document.getElementById('play-btn').textContent = '\u25B6';
     isPlaying = false;
   }
 
@@ -568,7 +555,7 @@
     cancelAllScheduled();
     isPlaying = true;
     startedAt = performance.now() - (fromSecs * 1000 / playbackSpeed);
-    document.getElementById('play-btn').textContent = '⏸';
+    document.getElementById('play-btn').textContent = '\u23F8';
     midiData.tracks.forEach(track => {
       track.notes.forEach(note => {
         if (note.time < fromSecs - 0.05) return;
@@ -589,13 +576,13 @@
   function pausePlayback() {
     pauseOffset = Math.min((performance.now() - startedAt) * playbackSpeed / 1000, durationSecs);
     cancelAllScheduled(); isPlaying = false;
-    document.getElementById('play-btn').textContent = '▶';
+    document.getElementById('play-btn').textContent = '\u25B6';
     cancelAnimationFrame(rafId);
   }
 
   function stopPlay() {
     pauseOffset = 0; cancelAllScheduled(); isPlaying = false;
-    document.getElementById('play-btn').textContent = '▶';
+    document.getElementById('play-btn').textContent = '\u25B6';
     document.getElementById('seek-fill').style.width = '0%';
     document.getElementById('time-current').textContent = '0:00';
     cancelAnimationFrame(rafId);
