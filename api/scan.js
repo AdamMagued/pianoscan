@@ -1,11 +1,9 @@
-import formidable from 'formidable';
-import fetch from 'node-fetch';
-import fs from 'fs';
-import FormData from 'form-data';
+const formidable = require('formidable');
+const fetch = require('node-fetch');
+const fs = require('fs');
+const FormData = require('form-data');
 
-export const config = { api: { bodyParser: false } };
-
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
 
   const form = formidable({});
@@ -19,12 +17,12 @@ export default async function handler(req, res) {
     fd.append('engine', engine);
     fd.append('file', fs.createReadStream(file.filepath), {
       filename: file.originalFilename,
-      contentType: file.mimetype,          // preserves application/pdf vs image/jpeg
+      contentType: file.mimetype,
     });
 
     try {
       const upstream = await fetch(
-        'http://192.168.1.224:8001/scan',   // direct LAN — no ngrok needed
+        'https://nonepisodically-influential-marya.ngrok-free.dev/scan',
         {
           method: 'POST',
           headers: {
@@ -43,4 +41,6 @@ export default async function handler(req, res) {
       res.status(500).json({ error: e.message });
     }
   });
-}
+};
+
+module.exports.config = { api: { bodyParser: false } };
