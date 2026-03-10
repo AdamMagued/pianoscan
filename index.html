@@ -143,6 +143,7 @@
       radial-gradient(ellipse 50% 40% at 80% 80%, rgba(201, 168, 76, 0.08) 0%, transparent 50%),
       radial-gradient(ellipse 40% 30% at 10% 70%, rgba(107, 91, 158, 0.1) 0%, transparent 50%);
     z-index: 0;
+    pointer-events: none;
   }
 
   #piano-canvas {
@@ -163,6 +164,11 @@
     align-items: center;
     text-align: center;
     padding: 0 24px 160px;
+    pointer-events: none;
+  }
+  .hero-content a,
+  .hero-content button {
+    pointer-events: auto;
   }
   .eyebrow {
     font-family: 'DM Mono', monospace;
@@ -285,6 +291,7 @@
     left: 50%;
     transform: translateX(-50%);
     z-index: 10;
+    pointer-events: none;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -1051,6 +1058,68 @@
     text-align: right;
   }
 
+  /* BPM control */
+  .bpm-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+    padding-left: 14px;
+    border-left: 1px solid rgba(255,255,255,0.05);
+  }
+  .bpm-label-text {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+  }
+  .bpm-input {
+    width: 58px;
+    padding: 5px 8px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(201,168,76,0.2);
+    border-radius: 6px;
+    color: var(--gold-light);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    text-align: center;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    -moz-appearance: textfield;
+  }
+  .bpm-input::-webkit-inner-spin-button,
+  .bpm-input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  .bpm-input:focus {
+    border-color: rgba(201,168,76,0.5);
+    box-shadow: 0 0 12px rgba(201,168,76,0.15);
+  }
+  .bpm-nudge {
+    width: 24px;
+    height: 24px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 4px;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    line-height: 1;
+    transition: all 0.15s;
+    padding: 0;
+    font-family: 'DM Mono', monospace;
+  }
+  .bpm-nudge:hover {
+    background: rgba(201,168,76,0.1);
+    border-color: rgba(201,168,76,0.3);
+    color: var(--gold);
+  }
+
   /* Download */
   .download-btn {
     display: inline-flex;
@@ -1168,7 +1237,7 @@
     border: 1px solid rgba(245,158,66,0.3);
   }
 
-  /* ===== PLAYBACK PIANO KEYBOARD ===== */
+  /* ===== PLAYBACK PIANO KEYBOARD (3D) ===== */
   .piano-kb-wrap {
     margin-top: 20px;
     padding-top: 20px;
@@ -1180,46 +1249,92 @@
     letter-spacing: 0.12em;
     color: var(--text-muted);
     text-transform: uppercase;
-    margin-bottom: 12px;
+    margin-bottom: 14px;
+  }
+  .piano-kb-perspective {
+    perspective: 700px;
+    perspective-origin: 50% 20%;
+    overflow: visible;
   }
   .piano-kb {
     position: relative;
-    height: 100px;
-    overflow: hidden;
-    border-radius: 0 0 8px 8px;
+    height: 120px;
     user-select: none;
+    transform: rotateX(18deg);
+    transform-origin: 50% 100%;
+    border-radius: 4px 4px 10px 10px;
+    background: rgba(6,6,15,0.5);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.3);
   }
   .piano-kb .pk-white {
     position: absolute;
     bottom: 0;
     height: 100%;
-    background: rgba(25, 23, 45, 0.9);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-top: none;
-    border-radius: 0 0 5px 5px;
-    transition: background 0.1s, box-shadow 0.1s;
+    background: linear-gradient(180deg,
+      rgba(20, 18, 38, 0.95) 0%,
+      rgba(30, 28, 52, 0.92) 40%,
+      rgba(38, 35, 62, 0.9) 100%);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-top: 1px solid rgba(255,255,255,0.1);
+    border-radius: 0 0 6px 6px;
+    transition: transform 0.08s ease, box-shadow 0.15s ease, background 0.15s ease;
     z-index: 1;
+    box-shadow:
+      inset 0 -4px 8px rgba(0,0,0,0.2),
+      inset 0 1px 0 rgba(255,255,255,0.06),
+      0 2px 4px rgba(0,0,0,0.3);
+  }
+  .piano-kb .pk-white:hover {
+    background: linear-gradient(180deg,
+      rgba(25, 23, 45, 0.95) 0%,
+      rgba(35, 32, 58, 0.92) 40%,
+      rgba(44, 40, 70, 0.9) 100%);
   }
   .piano-kb .pk-white.active {
-    background: rgba(201,168,76,0.25);
-    border-color: rgba(201,168,76,0.4);
-    box-shadow: 0 0 18px rgba(201,168,76,0.35), inset 0 -20px 30px rgba(201,168,76,0.08);
+    transform: translateY(3px);
+    background: linear-gradient(180deg,
+      rgba(160,130,50,0.3) 0%,
+      rgba(201,168,76,0.2) 50%,
+      rgba(201,168,76,0.15) 100%);
+    border-color: rgba(201,168,76,0.35);
+    box-shadow:
+      0 0 20px rgba(201,168,76,0.3),
+      0 0 40px rgba(201,168,76,0.1),
+      inset 0 -2px 6px rgba(201,168,76,0.15),
+      inset 0 1px 0 rgba(201,168,76,0.2);
   }
   .piano-kb .pk-black {
     position: absolute;
-    top: 0;
-    height: 60%;
-    background: rgba(8, 7, 18, 0.95);
-    border: 1px solid rgba(255,255,255,0.06);
-    border-top: none;
+    top: -2px;
+    height: 58%;
+    background: linear-gradient(180deg,
+      rgba(6, 5, 14, 1) 0%,
+      rgba(12, 10, 24, 0.98) 60%,
+      rgba(18, 16, 32, 0.95) 100%);
+    border: 1px solid rgba(255,255,255,0.04);
+    border-top: 1px solid rgba(255,255,255,0.08);
     border-radius: 0 0 4px 4px;
     z-index: 2;
-    transition: background 0.1s, box-shadow 0.1s;
+    transition: transform 0.08s ease, box-shadow 0.15s ease, background 0.15s ease;
+    box-shadow:
+      0 4px 8px rgba(0,0,0,0.5),
+      0 2px 3px rgba(0,0,0,0.4),
+      inset 0 -3px 5px rgba(0,0,0,0.3),
+      inset 0 1px 0 rgba(255,255,255,0.06);
   }
   .piano-kb .pk-black.active {
-    background: rgba(180,148,63,0.5);
-    border-color: rgba(201,168,76,0.5);
-    box-shadow: 0 0 14px rgba(201,168,76,0.4), inset 0 -10px 20px rgba(201,168,76,0.1);
+    transform: translateY(2px);
+    background: linear-gradient(180deg,
+      rgba(140,115,40,0.5) 0%,
+      rgba(180,148,63,0.4) 60%,
+      rgba(201,168,76,0.3) 100%);
+    border-color: rgba(201,168,76,0.4);
+    box-shadow:
+      0 0 16px rgba(201,168,76,0.45),
+      0 0 32px rgba(201,168,76,0.15),
+      0 2px 4px rgba(0,0,0,0.3),
+      inset 0 -2px 4px rgba(201,168,76,0.1),
+      inset 0 1px 0 rgba(201,168,76,0.25);
   }
 
   /* ===== RESPONSIVE ===== */
@@ -1235,6 +1350,9 @@
     .hero-content { padding: 0 20px 140px; }
     .player-controls { flex-wrap: wrap; }
     .waveform-wrap { display: none; }
+    .speed-row { flex-wrap: wrap; }
+    .bpm-group { margin-left: 0; padding-left: 0; border-left: none; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.05); width: 100%; justify-content: flex-start; }
+    .piano-kb { height: 90px; }
   }
 </style>
 </head>
@@ -1437,11 +1555,19 @@
             <span class="speed-label-text">SPEED</span>
             <input type="range" class="speed-slider" id="speed-slider" min="0.5" max="2" step="0.1" value="1" oninput="changeSpeed(this.value)">
             <span class="speed-value" id="speed-label">1.0x</span>
+            <div class="bpm-group">
+              <span class="bpm-label-text">BPM</span>
+              <button class="bpm-nudge" id="bpm-down" onclick="nudgeBpm(-5)">&#8722;</button>
+              <input type="number" class="bpm-input" id="bpm-input" value="120" min="20" max="400" onchange="setBpmFromInput(this.value)">
+              <button class="bpm-nudge" id="bpm-up" onclick="nudgeBpm(5)">+</button>
+            </div>
           </div>
         </div>
         <div class="piano-kb-wrap">
           <div class="piano-kb-label">Live keyboard</div>
-          <div class="piano-kb" id="piano-kb"></div>
+          <div class="piano-kb-perspective">
+            <div class="piano-kb" id="piano-kb"></div>
+          </div>
         </div>
         <a id="download-link" class="download-btn" download="pianoscan.mid">&#11015; Download MIDI</a>
       </div>
@@ -1912,6 +2038,7 @@ init();
 let midiData = null, pianoInstrument = null, isPlaying = false;
 let playbackSpeed = 1.0, durationSecs = 0, startedAt = 0, pauseOffset = 0;
 let scheduledTimeouts = [], rafId = null, audioCtx = null;
+let originalBpm = 120;
 
 window.addEventListener('load', async () => {
   try {
@@ -1933,6 +2060,17 @@ async function loadMidiForPlayback(blob) {
   document.getElementById('play-btn').textContent = '\u25B6';
   isPlaying = false;
   document.getElementById('waveform').classList.remove('active');
+
+  // Detect BPM from MIDI header
+  if (midiData.header && midiData.header.tempos && midiData.header.tempos.length > 0) {
+    originalBpm = Math.round(midiData.header.tempos[0].bpm);
+  } else {
+    originalBpm = 120;
+  }
+  playbackSpeed = 1.0;
+  document.getElementById('speed-slider').value = 1;
+  document.getElementById('speed-label').textContent = '1.0x';
+  document.getElementById('bpm-input').value = originalBpm;
 }
 
 function togglePlay() { if (!midiData) return; isPlaying ? pausePlayback() : startPlayback(pauseOffset); }
@@ -2008,7 +2146,28 @@ function changeSpeed(val) {
   if (wasPlaying) { pauseOffset = Math.min((performance.now() - startedAt) * playbackSpeed / 1000, durationSecs); cancelAllScheduled(); isPlaying = false; }
   playbackSpeed = parseFloat(val);
   document.getElementById('speed-label').textContent = playbackSpeed.toFixed(1) + 'x';
+  // Sync BPM display
+  const currentBpm = Math.round(originalBpm * playbackSpeed);
+  document.getElementById('bpm-input').value = currentBpm;
   if (wasPlaying) startPlayback(pauseOffset);
+}
+
+function setBpmFromInput(val) {
+  const bpm = parseInt(val);
+  if (!bpm || bpm < 20 || bpm > 400 || !originalBpm) return;
+  const newSpeed = Math.max(0.5, Math.min(2, bpm / originalBpm));
+  document.getElementById('speed-slider').value = newSpeed;
+  changeSpeed(newSpeed);
+  // Re-set the exact BPM the user typed (changeSpeed rounds)
+  document.getElementById('bpm-input').value = bpm;
+}
+
+function nudgeBpm(delta) {
+  const input = document.getElementById('bpm-input');
+  const currentBpm = parseInt(input.value) || originalBpm;
+  const newBpm = Math.max(20, Math.min(400, currentBpm + delta));
+  input.value = newBpm;
+  setBpmFromInput(newBpm);
 }
 
 // ========================================
