@@ -1971,8 +1971,13 @@ function handleFile(file) {
     previewWrap.style.display = 'block';
   }
 
-  scanBtn.disabled = false;
-  scanText.textContent = 'Scan this page';
+  if (triesUsed >= MAX_TRIES) {
+    scanBtn.disabled = true;
+    scanText.textContent = 'No scans remaining';
+  } else {
+    scanBtn.disabled = false;
+    scanText.textContent = 'Scan this page';
+  }
   resultBox.style.display = 'none';
   statusBox.style.display = 'none';
 }
@@ -2059,7 +2064,12 @@ async function doScan() {
     triesUsed++;
     localStorage.setItem('ps_tries', triesUsed);
     updateDots();
-    if (triesUsed >= MAX_TRIES) setTimeout(showNoTries, 3000);
+    if (triesUsed >= MAX_TRIES) {
+      // Keep result player visible — just disable scanning and show notice below
+      scanBtn.disabled = true;
+      scanText.textContent = 'No scans remaining';
+      setTimeout(() => { noTries.style.display = 'block'; }, 2000);
+    }
 
   } catch (err) {
     clearInterval(progressTimer);
