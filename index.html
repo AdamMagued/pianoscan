@@ -522,6 +522,44 @@
   }
   .tip-box strong { color: #fff; }
 
+  /* Audio unlock banner */
+  .audio-unlock-banner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 14px 22px;
+    margin-bottom: 20px;
+    background: linear-gradient(135deg, rgba(201,168,76,0.12) 0%, rgba(107,91,158,0.12) 100%);
+    border: 1px solid var(--glass-border-hover);
+    border-radius: 12px;
+    backdrop-filter: blur(10px);
+    cursor: pointer;
+    transition: all 0.3s;
+    animation: bannerPulse 2s ease-in-out infinite;
+  }
+  .audio-unlock-banner:hover {
+    background: linear-gradient(135deg, rgba(201,168,76,0.2) 0%, rgba(107,91,158,0.2) 100%);
+    border-color: var(--gold);
+    box-shadow: 0 0 20px var(--gold-glow);
+  }
+  .audio-unlock-banner .banner-icon {
+    font-size: 18px;
+  }
+  .audio-unlock-banner .banner-text {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    color: var(--gold-light);
+  }
+  .audio-unlock-banner.hidden {
+    display: none;
+  }
+  @keyframes bannerPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.75; }
+  }
+
   /* ===== DEMO SECTION ===== */
   .demo-section {
     position: relative;
@@ -1464,6 +1502,10 @@
 <!-- Demo -->
 <div id="demo" class="demo-section">
   <div class="demo-inner">
+    <div class="audio-unlock-banner" id="audio-unlock-banner" onclick="unlockAudio(this)">
+      <span class="banner-icon">&#x1F50A;</span>
+      <span class="banner-text">TAP HERE TO ENABLE AUDIO PLAYBACK</span>
+    </div>
     <div class="section-label reveal">Live Demo</div>
     <div class="section-title reveal">Try it yourself.</div>
     <p class="demo-sub reveal">3 free scans per browser. No sign-up needed.</p>
@@ -2039,13 +2081,37 @@ let midiData = null, pianoInstrument = null, isPlaying = false;
 let playbackSpeed = 1.0, durationSecs = 0, startedAt = 0, pauseOffset = 0;
 let scheduledTimeouts = [], rafId = null, audioCtx = null;
 let originalBpm = 120;
+let instrumentLoading = false;
 
-window.addEventListener('load', async () => {
-  try {
+// Create AudioContext lazily on user gesture, not on page load
+async function ensureAudioReady() {
+  if (!audioCtx) {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    pianoInstrument = await Soundfont.instrument(audioCtx, 'acoustic_grand_piano', { soundfont: 'MusyngKite', format: 'mp3' });
-  } catch(e) { console.warn('Soundfont load failed:', e); }
-});
+  }
+  if (audioCtx.state === 'suspended') {
+    await audioCtx.resume();
+  }
+  if (!pianoInstrument && !instrumentLoading) {
+    instrumentLoading = true;
+    try {
+      pianoInstrument = await Soundfont.instrument(audioCtx, 'acoustic_grand_piano', { soundfont: 'MusyngKite', format: 'mp3' });
+    } catch(e) { console.warn('Soundfont load failed:', e); instrumentLoading = false; }
+  }
+}
+
+// Unlock audio on any click in the demo section (also handles the banner)
+function unlockAudio(bannerEl) {
+  ensureAudioReady();
+  if (bannerEl) bannerEl.classList.add('hidden');
+}
+
+// Also auto-dismiss banner on first click/tap anywhere in the document
+document.addEventListener('click', function _autoUnlock() {
+  ensureAudioReady();
+  const banner = document.getElementById('audio-unlock-banner');
+  if (banner) banner.classList.add('hidden');
+  document.removeEventListener('click', _autoUnlock);
+}, { once: true });
 
 function fmt(s) { s = Math.max(0, s); const m = Math.floor(s/60), sec = Math.floor(s%60); return m + ':' + String(sec).padStart(2,'0'); }
 
@@ -2075,9 +2141,8 @@ async function loadMidiForPlayback(blob) {
 
 function togglePlay() { if (!midiData) return; isPlaying ? pausePlayback() : startPlayback(pauseOffset); }
 
-function startPlayback(fromSecs) {
-  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  if (audioCtx.state === 'suspended') audioCtx.resume();
+async function startPlayback(fromSecs) {
+  await ensureAudioReady();
   cancelAllScheduled();
   isPlaying = true;
   startedAt = performance.now() - (fromSecs * 1000 / playbackSpeed);
@@ -2257,8 +2322,8 @@ function nudgeBpm(delta) {
 
 // Patch startPlayback to also schedule keyboard highlights
 const _origStartPlayback = startPlayback;
-startPlayback = function(fromSecs) {
-  _origStartPlayback(fromSecs);
+startPlayback = async function(fromSecs) {
+  await _origStartPlayback(fromSecs);
   // Schedule keyboard highlights
   if (!midiData || !window._pianoKbHighlight) return;
   midiData.tracks.forEach(track => {
