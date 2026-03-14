@@ -2104,7 +2104,7 @@ async function ensureAudioReady() {
   if (!pianoInstrument && !instrumentLoading) {
     instrumentLoading = true;
     try {
-      pianoInstrument = await Soundfont.instrument(audioCtx, 'acoustic_grand_piano', { soundfont: 'MusyngKite', format: 'mp3' });
+      pianoInstrument = await Soundfont.instrument(audioCtx, 'acoustic_grand_piano', { soundfont: 'FluidR3_GM', format: 'mp3' });
     } catch(e) { console.warn('Soundfont load failed:', e); instrumentLoading = false; }
   }
 }
