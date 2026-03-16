@@ -1330,16 +1330,17 @@
   }
   .piano-kb .pk-white.active {
     transform: translateY(3px);
+    animation: keyPressWhite 0.15s ease-out;
     background: linear-gradient(180deg,
-      rgba(160,130,50,0.3) 0%,
-      rgba(201,168,76,0.2) 50%,
-      rgba(201,168,76,0.15) 100%);
-    border-color: rgba(201,168,76,0.35);
+      rgba(220,190,70,0.5) 0%,
+      rgba(201,168,76,0.4) 50%,
+      rgba(201,168,76,0.25) 100%);
+    border-color: rgba(201,168,76,0.5);
     box-shadow:
-      0 0 20px rgba(201,168,76,0.3),
-      0 0 40px rgba(201,168,76,0.1),
-      inset 0 -2px 6px rgba(201,168,76,0.15),
-      inset 0 1px 0 rgba(201,168,76,0.2);
+      0 0 35px rgba(201,168,76,0.55),
+      0 0 70px rgba(201,168,76,0.2),
+      inset 0 -2px 8px rgba(201,168,76,0.25),
+      inset 0 1px 0 rgba(201,168,76,0.3);
   }
   .piano-kb .pk-black {
     position: absolute;
@@ -1362,17 +1363,38 @@
   }
   .piano-kb .pk-black.active {
     transform: translateY(2px);
+    animation: keyPressBlack 0.15s ease-out;
     background: linear-gradient(180deg,
-      rgba(140,115,40,0.5) 0%,
-      rgba(180,148,63,0.4) 60%,
-      rgba(201,168,76,0.3) 100%);
-    border-color: rgba(201,168,76,0.4);
+      rgba(232,201,106,0.8) 0%,
+      rgba(201,168,76,0.6) 35%,
+      rgba(160,130,50,0.35) 100%);
+    border-color: rgba(201,168,76,0.55);
     box-shadow:
-      0 0 16px rgba(201,168,76,0.45),
-      0 0 32px rgba(201,168,76,0.15),
+      0 0 28px rgba(201,168,76,0.65),
+      0 0 56px rgba(201,168,76,0.25),
       0 2px 4px rgba(0,0,0,0.3),
-      inset 0 -2px 4px rgba(201,168,76,0.1),
-      inset 0 1px 0 rgba(201,168,76,0.25);
+      inset 0 -2px 4px rgba(201,168,76,0.2),
+      inset 0 1px 0 rgba(201,168,76,0.5);
+  }
+
+  @keyframes keyPressWhite {
+    0% { transform: translateY(3px) scaleY(1.03); }
+    100% { transform: translateY(3px); }
+  }
+  @keyframes keyPressBlack {
+    0% { transform: translateY(2px) scaleY(1.03); }
+    100% { transform: translateY(2px); }
+  }
+
+  /* Falling notes canvas */
+  .falling-notes-canvas {
+    display: block;
+    width: 100%;
+    height: 200px;
+    background: linear-gradient(180deg, rgba(6,6,15,1) 0%, rgba(10,10,22,0.95) 100%);
+    border-radius: 8px 8px 0 0;
+    border: 1px solid rgba(255,255,255,0.04);
+    border-bottom: 1px solid rgba(255,255,255,0.02);
   }
 
   /* ===== RESPONSIVE ===== */
@@ -1391,6 +1413,7 @@
     .speed-row { flex-wrap: wrap; }
     .bpm-group { margin-left: 0; padding-left: 0; border-left: none; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.05); width: 100%; justify-content: flex-start; }
     .piano-kb { height: 90px; }
+    .falling-notes-canvas { height: 120px; }
   }
 </style>
 </head>
@@ -1607,6 +1630,7 @@
         </div>
         <div class="piano-kb-wrap">
           <div class="piano-kb-label">Live keyboard</div>
+          <canvas id="falling-notes-canvas" class="falling-notes-canvas"></canvas>
           <div class="piano-kb-perspective">
             <div class="piano-kb" id="piano-kb"></div>
           </div>
@@ -2329,9 +2353,15 @@ function nudgeBpm(delta) {
   window._pianoKbHighlight = function(midiNote, durationMs) {
     const el = keyEls[midiNote];
     if (!el) return;
-    el.classList.add('active');
     // Clear any existing timer for this key
-    if (activeTimers[midiNote]) clearTimeout(activeTimers[midiNote]);
+    if (activeTimers[midiNote]) {
+      clearTimeout(activeTimers[midiNote]);
+      delete activeTimers[midiNote];
+    }
+    // Remove and re-add active class to restart CSS animation
+    el.classList.remove('active');
+    void el.offsetWidth; // force reflow
+    el.classList.add('active');
     activeTimers[midiNote] = setTimeout(() => {
       el.classList.remove('active');
       delete activeTimers[midiNote];
@@ -2344,11 +2374,123 @@ function nudgeBpm(delta) {
   };
 })();
 
-// Patch startPlayback to also schedule keyboard highlights
+// ========================================
+// FALLING NOTES VISUALIZER
+// ========================================
+(function() {
+  const canvas = document.getElementById('falling-notes-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+
+  const MIDI_LO = 36, MIDI_HI = 71;
+  const LOOK_AHEAD = 2.5;
+  const HAND_SPLIT = 60;
+
+  const whiteOff = [0,2,4,5,7,9,11];
+  const wKeys = [];
+  for (let m = MIDI_LO; m <= MIDI_HI; m++) if (whiteOff.includes(m % 12)) wKeys.push(m);
+  const tw = wKeys.length;
+  const wW = 1 / tw;
+  const kp = {};
+  wKeys.forEach((m, i) => { kp[m] = { l: i * wW, w: wW }; });
+  for (let m = MIDI_LO; m <= MIDI_HI; m++) {
+    if (whiteOff.includes(m % 12)) continue;
+    let wi = -1;
+    for (let w = wKeys.length - 1; w >= 0; w--) { if (wKeys[w] < m) { wi = w; break; } }
+    if (wi < 0) continue;
+    const bw = wW * 0.6;
+    kp[m] = { l: (wi + 0.55) * wW - bw / 2, w: bw };
+  }
+
+  let animId = null;
+
+  function draw() {
+    const dpr = window.devicePixelRatio || 1;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
+    if (canvas.width !== W * dpr || canvas.height !== H * dpr) {
+      canvas.width = W * dpr;
+      canvas.height = H * dpr;
+    }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+
+    if (!midiData) { animId = null; return; }
+
+    const ct = isPlaying
+      ? Math.min((performance.now() - startedAt) * playbackSpeed / 1000, durationSecs)
+      : pauseOffset;
+
+    midiData.tracks.forEach(track => {
+      track.notes.forEach(note => {
+        const p = kp[note.midi];
+        if (!p) return;
+        const tS = note.time, tE = tS + note.duration;
+        if (tE <= ct || tS >= ct + LOOK_AHEAD) return;
+
+        let yB = H * (1 - (tS - ct) / LOOK_AHEAD);
+        let yT = H * (1 - (tE - ct) / LOOK_AHEAD);
+        yT = Math.max(0, yT);
+        yB = Math.min(H, yB);
+        if (yB - yT < 1) return;
+
+        const x = p.l * W + 1.5;
+        const w = p.w * W - 3;
+        const bH = yB - yT;
+        const isRight = note.midi >= HAND_SPLIT;
+        const col = isRight ? '#c9a84c' : '#8b5cf6';
+        const colGlow = isRight ? 'rgba(201,168,76,0.15)' : 'rgba(139,92,246,0.15)';
+
+        // Glow
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = colGlow;
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(x - 2, yT - 1, w + 4, bH + 2, 5);
+        else ctx.rect(x - 2, yT - 1, w + 4, bH + 2);
+        ctx.fill();
+
+        // Bar
+        ctx.globalAlpha = 0.9;
+        ctx.fillStyle = col;
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(x, yT, w, bH, 4);
+        else ctx.rect(x, yT, w, bH);
+        ctx.fill();
+      });
+    });
+
+    // Top gradient fade
+    ctx.globalAlpha = 1;
+    const grad = ctx.createLinearGradient(0, 0, 0, H * 0.3);
+    grad.addColorStop(0, 'rgba(6,6,15,1)');
+    grad.addColorStop(1, 'rgba(6,6,15,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H * 0.3);
+
+    if (isPlaying) animId = requestAnimationFrame(draw);
+    else animId = null;
+  }
+
+  window._fallingNotesStart = function() {
+    if (animId) cancelAnimationFrame(animId);
+    animId = requestAnimationFrame(draw);
+  };
+  window._fallingNotesStop = function() {
+    if (animId) { cancelAnimationFrame(animId); animId = null; }
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = canvas.clientWidth * dpr;
+    canvas.height = canvas.clientHeight * dpr;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  };
+  window._fallingNotesUpdate = function() {
+    if (!animId) animId = requestAnimationFrame(draw);
+  };
+})();
+
+// Patch startPlayback to schedule keyboard highlights + falling notes
 const _origStartPlayback = startPlayback;
 startPlayback = async function(fromSecs) {
   await _origStartPlayback(fromSecs);
-  // Schedule keyboard highlights
   if (!midiData || !window._pianoKbHighlight) return;
   midiData.tracks.forEach(track => {
     track.notes.forEach(note => {
@@ -2362,18 +2504,28 @@ startPlayback = async function(fromSecs) {
       scheduledTimeouts.push(t);
     });
   });
+  if (window._fallingNotesStart) window._fallingNotesStart();
 };
 
-// Patch stopPlay and pausePlayback to clear keyboard
+// Patch stopPlay and pausePlayback to clear keyboard + falling notes
 const _origStopPlay = stopPlay;
 stopPlay = function() {
   if (window._pianoKbClear) window._pianoKbClear();
+  if (window._fallingNotesStop) window._fallingNotesStop();
   _origStopPlay();
 };
 const _origPause = pausePlayback;
 pausePlayback = function() {
   if (window._pianoKbClear) window._pianoKbClear();
   _origPause();
+  if (window._fallingNotesUpdate) window._fallingNotesUpdate();
+};
+
+// Patch seekBar to update falling notes when paused
+const _origSeekBar = seekBar;
+seekBar = function(e) {
+  _origSeekBar(e);
+  if (!isPlaying && window._fallingNotesUpdate) window._fallingNotesUpdate();
 };
 </script>
 </body>
