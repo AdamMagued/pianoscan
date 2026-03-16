@@ -2047,9 +2047,13 @@ async function doScan() {
     clearTimeout(timer);
     clearInterval(progressTimer);
 
-    if (!response.ok) throw new Error('Server returned ' + response.status);
+    if (!response.ok) {
+      if (response.status === 500) throw Object.assign(new Error(), { _friendly: 'Something went wrong on our end. Try again in a moment.' });
+      if (response.status === 404) throw Object.assign(new Error(), { _friendly: 'Couldn\u2019t reach the server. Try again shortly.' });
+      throw Object.assign(new Error(), { _friendly: 'Processing failed. Try a different image or engine.' });
+    }
     const data = await response.arrayBuffer();
-    if (!data.byteLength) throw new Error('Empty response from server');
+    if (!data.byteLength) throw Object.assign(new Error(), { _friendly: 'We processed it but got nothing back. Try again or switch engines.' });
 
     midiBlob = new Blob([data], { type: 'audio/midi' });
     const url = URL.createObjectURL(midiBlob);
@@ -2074,11 +2078,21 @@ async function doScan() {
   } catch (err) {
     clearInterval(progressTimer);
     setProgress(0);
-    setStatus(err.name === 'AbortError' ? 'Timed out \u2014 server took too long.' : 'Error: ' + err.message, 'error');
+    let friendlyMsg;
+    if (err._friendly) {
+      friendlyMsg = err._friendly;
+    } else if (err.name === 'AbortError') {
+      friendlyMsg = 'This one\u2019s taking too long. Try a smaller image or switch engines.';
+    } else if (err.name === 'TypeError' || err.message === 'Failed to fetch' || err.message === 'fetch failed') {
+      friendlyMsg = 'Can\u2019t connect to the server right now. Make sure you\u2019re online.';
+    } else {
+      friendlyMsg = 'Something went wrong. Try again or switch to a different engine.';
+    }
+    setStatus(friendlyMsg, 'error');
     scanBtn.disabled = false;
     scanBtn.classList.remove('scanning');
     scanIcon.textContent = '\u{1D11E}';
-    scanText.textContent = 'Try again';
+    scanText.textContent = 'Try Again';
   }
 }
 
